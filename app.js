@@ -3,7 +3,7 @@
 (() => {
   'use strict';
 
-  const APP_VERSION = '1.1.0';
+  const APP_VERSION = '1.2.0';
   const KEY = 'fef.v1';
   const DAY_MS = 864e5;
   const CIRC = 339.292; // 2 * PI * 54, anello del timer
@@ -100,7 +100,8 @@
   const exLog = (rec, id) => (rec && rec.ex && rec.ex[id]) || null;
   const exDone = (l) => !!l && (l.done != null ? !!l.done : !!(l.kg || l.reps));
   const recHasData = (r) => !!r && Object.values(r.ex || {}).some((l) => l && (l.done || l.kg || l.reps));
-  const recDone = (r) => !!r && (r.done != null ? !!r.done : recHasData(r));
+  const recDone = (r) => !!r && !r.skipped && (r.done != null ? !!r.done : recHasData(r));
+  const dayStatus = (r) => (r && r.skipped ? 'skipped' : recDone(r) ? 'done' : '');
 
   /* ---------- calendario del ciclo ---------- */
 
@@ -302,8 +303,8 @@
     if (!l.kg) return `${commas(l.reps)} rip`;
     return [`${commas(l.kg)} kg`, l.reps ? `× ${commas(l.reps)}` : ''].filter(Boolean).join(' ');
   }
-  const field = (id, f, label, val, ph, mode) =>
-    `<label class="field"><span class="field-l">${esc(label)}</span><input class="input" type="text" inputmode="${mode}" autocomplete="off" autocorrect="off" enterkeyhint="done" maxlength="8" data-ex="${esc(id)}" data-f="${f}" value="${esc(val || '')}" placeholder="${esc(ph || '')}"></label>`;
+  const field = (id, f, label, val, ph, mode, off) =>
+    `<label class="field"><span class="field-l">${esc(label)}</span><input class="input" type="text" inputmode="${mode}" autocomplete="off" autocorrect="off" enterkeyhint="done" maxlength="8" data-ex="${esc(id)}" data-f="${f}" value="${esc(val || '')}" placeholder="${esc(ph || '')}"${off ? ' disabled' : ''}></label>`;
 
   function exCard(ex, c, i, o) {
     const v = resolveEx(ex, c);
@@ -339,31 +340,32 @@
     actions.push(`<a class="chip" href="${yt(v)}" target="_blank" rel="noopener">${ico('play')}Esecuzione</a>`);
 
     let log = '';
-    if (o.editable) {
+    const off = !o.editable;
+    if (o.editable || o.future) {
       const last = lastLog(v.id, o.date);
       const [rm] = repsParts(v.reps || '');
       const repsPh = (last && last.reps) || rm.replace(/\s*s$/, '');
       const fields = [];
       if (v.cardio) {
-        fields.push(field(v.id, 'reps', 'Minuti fatti', l && l.reps, (last && last.reps) || splitUnit(v.duration)[0], 'numeric'));
-        fields.push(field(v.id, 'kg', 'Livello o km/h', l && l.kg, (last && last.kg) || '5', 'decimal'));
+        fields.push(field(v.id, 'reps', 'Minuti fatti', l && l.reps, (last && last.reps) || splitUnit(v.duration)[0], 'numeric', off));
+        fields.push(field(v.id, 'kg', 'Livello o km/h', l && l.kg, (last && last.kg) || '5', 'decimal', off));
       } else if (isBodyweight(v)) {
-        fields.push(field(v.id, 'reps', isTimed(v) ? 'Secondi fatti' : 'Ripetizioni fatte', l && l.reps, repsPh, 'numeric'));
+        fields.push(field(v.id, 'reps', isTimed(v) ? 'Secondi fatti' : 'Ripetizioni fatte', l && l.reps, repsPh, 'numeric', off));
       } else {
         const kgPh = (last && last.kg) || (String(v.load).match(/[\d.,]+/) || [''])[0];
-        fields.push(field(v.id, 'kg', /\+/.test(v.load) ? 'Kg per manubrio' : 'Kg fatti', l && l.kg, kgPh, 'decimal'));
-        fields.push(field(v.id, 'reps', 'Ripetizioni fatte', l && l.reps, repsPh, 'numeric'));
+        fields.push(field(v.id, 'kg', /\+/.test(v.load) ? 'Kg per manubrio' : 'Kg fatti', l && l.kg, kgPh, 'decimal', off));
+        fields.push(field(v.id, 'reps', 'Ripetizioni fatte', l && l.reps, repsPh, 'numeric', off));
       }
-      const lastTxt = last ? `<p class="ex-last">Ultima volta: ${esc(logText(v, last))} · ${esc(fmtDay(last.date))}</p>` : '';
+      const lastTxt = off ? '<p class="ex-last">Si compila il giorno della seduta.</p>' : last ? `<p class="ex-last">Ultima volta: ${esc(logText(v, last))} · ${esc(fmtDay(last.date))}</p>` : '';
       log = `<div class="ex-log${fields.length === 1 ? ' single' : ''}">${fields.join('')}${lastTxt}</div>`;
     }
 
-    const head = o.editable
-      ? `<button type="button" class="ex-check" data-act="ex-toggle" data-ex="${esc(v.id)}" aria-pressed="${done}" aria-label="${esc(v.name)}: segna come fatto"><span class="ex-check-dot"><span class="num-in">${i + 1}</span>${ico('check')}</span></button>`
-      : `<span class="ex-idx" aria-hidden="true">${i + 1}</span>`;
+    const doneBtn = o.editable || o.future
+      ? `<button type="button" class="ex-done" data-act="ex-toggle" data-ex="${esc(v.id)}" aria-pressed="${done}" aria-label="${esc(v.name)}: fatto"${off ? ' disabled' : ''}>${ico('check')}<span>Fatto</span></button>`
+      : '';
 
     return `<article class="ex${done ? ' is-done' : ''}" data-card="${esc(v.id)}">
-      <div class="ex-h">${head}<div class="ex-title"><h3 class="ex-name">${esc(v.name)}</h3>${tags.length ? `<div class="tags">${tags.join('')}</div>` : ''}</div></div>
+      <div class="ex-h"><span class="ex-idx" aria-hidden="true">${i + 1}</span><div class="ex-title"><h3 class="ex-name">${esc(v.name)}</h3>${tags.length ? `<div class="tags">${tags.join('')}</div>` : ''}</div>${doneBtn}</div>
       <div class="ex-nums">${nums}</div>
       ${v.note ? `<p class="ex-note">${esc(v.note)}</p>` : ''}
       ${callout ? `<p class="ex-callout">${esc(callout)}</p>` : ''}
@@ -423,16 +425,25 @@
     let h = `<div class="session-head${s.recovery ? ' sep' : ''}">
       <p class="eyebrow">${esc(eyebrow)}</p>
       <h${s.recovery ? 2 : 1} class="h1${s.recovery ? ' h1-s' : ''}">${esc(sess.title)}</h${s.recovery ? 2 : 1}>
-      <p class="session-sub" id="progress">${editable ? `${doneN} di ${list.length} esercizi fatti` : `${list.length} esercizi`}</p>
+      <p class="session-sub">${list.length} esercizi</p>
       ${pills.length ? `<div class="pill-row">${pills.join('')}</div>` : ''}
     </div>`;
     if (s.forced) h += `<button type="button" class="btn btn-plain btn-block" data-act="unforce" style="margin-bottom:12px">Torna alla seduta del calendario</button>`;
+    const st = dayStatus(rec);
+    h += `<section class="card day-status">
+      <div class="kv"><h2 class="card-title" style="margin:0">${date === S.today ? 'Allenamento di oggi' : `Allenamento di ${esc(fmtDay(date))}`}</h2><span class="muted small" id="progress">${doneN} di ${list.length} fatti</span></div>
+      <div class="choice">
+        <button type="button" class="choice-btn" data-act="day-status" data-v="done" aria-pressed="${st === 'done'}" ${editable ? '' : 'disabled'}>${ico('check')}Fatto</button>
+        <button type="button" class="choice-btn bad" data-act="day-status" data-v="skipped" aria-pressed="${st === 'skipped'}" ${editable ? '' : 'disabled'}>Saltato</button>
+      </div>
+      <p class="muted small" style="margin:10px 0 0">${editable ? 'Si segna fatto da solo quando registri un esercizio. Se oggi non ti alleni, tocca Saltato.' : 'Si segna il giorno stesso.'}</p>
+    </section>`;
     h += seg('variant', [['full', 'Completa'], ['short', '30 min'], ['bw', 'Corpo libero']], variant, 'Versione della seduta');
     if (variant === 'bw') h += `<div class="banner">${ico('bag')}<div>${esc(P.bodyweight.rule)}</div></div>`;
     if (variant === 'short') h += `<div class="banner">${ico('timer')}<div>Versione corta per le mattine strette. Rotazioni esterne e face pull restano sempre.</div></div>`;
     if (date === S.today && !recDone(rec)) h += `<div class="banner">${ico('timer')}<div>Caffè doppio 30-45 min prima, niente grassi, fibre o barrette nell'ora prima. ${variant === 'bw' ? '' : esc(P.rules.warmup)}</div></div>`;
 
-    h += list.map((e, i) => exCard(e, c, i, { rec, date, editable })).join('');
+    h += list.map((e, i) => exCard(e, c, i, { rec, date, editable, future: !editable })).join('');
 
     if (sess.push) {
       const sh = rec && rec.shoulder;
@@ -452,8 +463,6 @@
         <label class="field"><span class="field-l">Nota della seduta</span>
         <textarea class="input" data-note="1" rows="3" placeholder="Come è andata, cosa hai cambiato, cosa dire a Claude">${esc((rec && rec.note) || '')}</textarea></label>
       </section>`;
-      const dn = recDone(rec);
-      h += `<button type="button" class="done-toggle" data-act="done-toggle" aria-pressed="${dn}"><span class="ex-check-dot">${ico('check')}</span><span>${dn ? 'Seduta fatta' : 'Segna la seduta come fatta'}</span></button>`;
       const b = P.food.breakfast[Math.abs(dnum(date)) % P.food.breakfast.length];
       h += `<section class="card" style="margin-top:12px"><h2 class="card-title">Dopo: colazione</h2><p>${esc(P.food.breakfastGoal.replace(/^Colazione dopo l'allenamento: /, 'Obiettivo '))}</p><p class="muted">Oggi, per esempio: ${esc(low(b))}</p></section>`;
     }
@@ -695,18 +704,33 @@
     for (let i = 0; i < 7; i++) {
       const d = addDays(mon, i);
       const r = DB.days[d];
-      if (!r || (!recHasData(r) && !r.note && !r.shoulder && !r.done)) continue;
       const sid = loggedSession(d);
-      const lines = [];
-      if (sid) {
-        const all = sessionExercises(sid);
-        all.forEach((e) => { const l = exLog(r, e.id); const t = logText(e, l); if (t) lines.push(`<div class="log-line"><span>${esc(e.name)}</span><span>${esc(t)}</span></div>`); });
+      const st = dayStatus(r);
+      const hasAny = !!r && (recHasData(r) || !!r.note || !!r.shoulder || r.done === true || !!r.skipped);
+      const missedDay = isMissedDay(d);
+      if (!hasAny && !missedDay) continue;
+      const note = r && r.note ? `<p class="muted small" style="margin-top:8px">Nota: ${esc(r.note)}</p>` : '';
+      if (missedDay && !recHasData(r)) {
+        const recd = recoveredOn(d, sid);
+        days += `<div class="log-day card is-skipped"><h4>${esc(cap(fmtDay(d)))}${sid ? ` · ${esc(P.sessions[sid].name)}` : ''}</h4>
+          <p class="muted small">Saltata${recd ? `, recuperata ${esc(fmtDay(recd))}` : ''}.</p>${note}</div>`;
+        continue;
       }
-      days += `<div class="log-day card"><h4>${esc(cap(fmtDay(d)))}${sid ? ` · ${esc(P.sessions[sid].name)}` : ''}${r.variant === 'short' ? ', 30 min' : r.variant === 'bw' ? ', corpo libero' : ''}</h4>
+      const lines = [];
+      let miss = [];
+      if (sid) {
+        sessionExercises(sid).forEach((e) => { const l = exLog(r, e.id); const t = logText(e, l); if (t) lines.push(`<div class="log-line"><span>${esc(e.name)}</span><span>${esc(t)}</span></div>`); });
+        miss = exercisesFor(sid, (r && r.variant) || 'full').filter((e) => !exDone(exLog(r, e.id))).map((e) => e.name);
+      }
+      const variant = r && r.variant;
+      days += `<div class="log-day card"><h4>${esc(cap(fmtDay(d)))}${sid ? ` · ${esc(P.sessions[sid].name)}` : ''}${variant === 'short' ? ', 30 min' : variant === 'bw' ? ', corpo libero' : ''}${st === 'done' ? '' : ', non segnata come fatta'}</h4>
         ${lines.join('') || '<p class="muted small">Seduta segnata, senza numeri.</p>'}
-        ${r.note ? `<p class="muted small" style="margin-top:8px">Nota: ${esc(r.note)}</p>` : ''}</div>`;
+        ${miss.length ? `<p class="muted small" style="margin-top:8px">Non fatti: ${esc(miss.join(', '))}</p>` : ''}
+        ${note}</div>`;
     }
     h += days || `<section class="card"><p class="muted">Niente registrato in questa settimana.</p></section>`;
+
+    h += cycleCard();
 
     const sat = addDays(mon, 5);
     if (c.status === 'in' || dnum(sat) === dnum(addDays(P.cycle.start, -2))) h += measuresCard(sat, dnum(sat) <= dnum(S.today));
@@ -716,6 +740,65 @@
       <details class="card" style="margin-top:12px" id="previewBox"><summary>Vedi il testo che copi</summary><pre class="preview" id="previewText">${esc(text)}</pre></details>
       <p class="footer-note">Il registro resta su questo telefono e non arriva a Claude da solo. Apri l'app sempre dall'icona sulla Home: Safari e l'icona tengono due registri separati.</p>`;
     return h;
+  }
+  function isMissedDay(d) {
+    const c = ctx(d);
+    if (c.status !== 'in' || !P.sessions[c.slot]) return false;
+    const st = dayStatus(DB.days[d]);
+    if (st === 'done') return false;
+    if (st === 'skipped') return true;
+    if (DB.days[d] && DB.days[d].forced) return false;
+    return dnum(d) < dnum(S.today);
+  }
+  function recoveredOn(d, sid) {
+    if (!sid) return null;
+    const sat = addDays(monday(d), 5);
+    if (dnum(sat) <= dnum(d)) return null;
+    const r = DB.days[sat];
+    return r && recDone(r) && loggedSession(sat) === sid ? sat : null;
+  }
+  function cycleStats() {
+    const last = dnum(S.today) < dnum(P.cycle.end) ? S.today : P.cycle.end;
+    if (dnum(last) < dnum(P.cycle.start)) return null;
+    const out = { done: 0, extra: 0, skipped: [], miss: {}, seen: {} };
+    for (let d = P.cycle.start; dnum(d) <= dnum(last); d = addDays(d, 1)) {
+      const c = ctx(d);
+      const r = DB.days[d];
+      if (dayStatus(r) === 'done') {
+        const sid = loggedSession(d);
+        if (P.sessions[c.slot] && !(r && r.forced)) out.done++; else out.extra++;
+        if (sid) {
+          exercisesFor(sid, (r && r.variant) || 'full').forEach((e) => {
+            out.seen[e.name] = (out.seen[e.name] || 0) + 1;
+            if (!exDone(exLog(r, e.id))) out.miss[e.name] = (out.miss[e.name] || 0) + 1;
+          });
+        }
+      } else if (isMissedDay(d)) {
+        const sid = loggedSession(d);
+        out.skipped.push({ d, sid, rec: recoveredOn(d, sid) });
+      }
+    }
+    return out;
+  }
+  function cycleCard() {
+    const cs = cycleStats();
+    if (!cs) return `<h2 class="h2">Tutto il ciclo</h2><section class="card"><p class="muted">Il conteggio di sedute fatte e saltate parte ${esc(low(fmtLong(P.cycle.start)))}.</p></section>`;
+    const recovered = cs.skipped.filter((x) => x.rec).length;
+    const skippedList = cs.skipped.slice(-8).reverse().map((x) => `<li class="kv"><span>${esc(cap(fmtDay(x.d)))}${x.sid ? ` · ${esc(P.sessions[x.sid].name)}` : ''}</span><span class="muted small">${x.rec ? `recuperata ${esc(fmtDay(x.rec))}` : 'persa'}</span></li>`).join('');
+    const missList = Object.keys(cs.miss).sort((a, b) => cs.miss[b] - cs.miss[a]).slice(0, 6)
+      .map((n) => `<li class="kv"><span>${esc(n)}</span><span class="kv-v">${cs.miss[n]} su ${cs.seen[n]}</span></li>`).join('');
+    return `<h2 class="h2">Tutto il ciclo finora</h2><section class="card">
+      <div class="stat-row" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat ok"><b>${cs.done}</b><span>fatte</span></div>
+        <div class="stat"><b>${cs.skipped.length}</b><span>saltate</span></div>
+        <div class="stat"><b>${cs.extra}</b><span>recuperi</span></div>
+      </div>
+      <p class="field-l" style="margin:16px 0 6px">Giorni di allenamento saltati${cs.skipped.length > 8 ? ', gli ultimi 8' : ''}</p>
+      ${skippedList ? `<ul class="list">${skippedList}</ul>` : '<p class="muted small">Nessuno finora.</p>'}
+      ${cs.skipped.length ? `<p class="muted small" style="margin-top:6px">${recovered} ${recovered === 1 ? "recuperata" : "recuperate"} il sabato.</p>` : ''}
+      <p class="field-l" style="margin:16px 0 6px">Esercizi non fatti nelle sedute fatte</p>
+      ${missList ? `<ul class="list">${missList}</ul>` : '<p class="muted small">Nessuno finora.</p>'}
+    </section>`;
   }
   function sessionExercises(sid) {
     const seen = new Set();
@@ -753,6 +836,9 @@
     const doneIds = req.filter((s) => s in done);
     const missed = req.filter((s) => !(s in done));
     L.push(`Sedute fatte: ${doneIds.length} su ${req.length}${doneIds.length ? ` (${doneIds.map((s) => (done[s] ? `${s} ${fmtDay(done[s])}` : `${s}`)).join(', ')})` : ''}.${missed.length ? ` Mancano: ${missed.join(', ')}.` : ''}`);
+    const missedDays = [];
+    for (let i = 0; i < 7; i++) { const d = addDays(mon, i); if (isMissedDay(d)) { const sid = loggedSession(d); const recd = recoveredOn(d, sid); missedDays.push(`${fmtDay(d)}${sid ? ` (${sid}${recd ? `, recuperata ${fmtDay(recd)}` : ''})` : ''}`); } }
+    if (missedDays.length) L.push(`Giorni di allenamento saltati: ${missedDays.join(', ')}.`);
     const satRec = DB.days[addDays(mon, 5)];
     if (satRec && recDone(satRec) && P.sessions[satRec.session]) L.push(`Sabato: recuperata la ${P.sessions[satRec.session].name}.`);
     const sh = shoulderWeekLine(mon);
@@ -764,6 +850,7 @@
       if (!r || (!recHasData(r) && !r.note && !r.done)) continue;
       const sid = loggedSession(d);
       if (!sid) continue;
+      if (dayStatus(r) === 'skipped' && !recHasData(r)) { if (r.note) { L.push(''); L.push(`${fmtDay(d).toUpperCase()} · saltata. Nota: ${r.note.replace(/\s+/g, ' ').trim()}`); } continue; }
       const dc = ctx(d);
       const variant = r.variant || 'full';
       const vName = variant === 'short' ? 'versione da 30 min' : variant === 'bw' ? P.bodyweight[P.sessions[sid].bodyweight].name.toLowerCase() : 'completa';
@@ -780,8 +867,16 @@
         else if (exDone(l)) L.push(`- ${v.name} (previsto ${plan}): fatto, senza numeri`);
         else skipped.push(v.name);
       });
-      if (skipped.length) L.push(`- Non registrati: ${skipped.join(', ')}`);
+      if (skipped.length) L.push(`- Non fatti: ${skipped.join(', ')}`);
       if (r.note) L.push(`Nota: ${r.note.replace(/\s+/g, ' ').trim()}`);
+    }
+
+    const cs = cycleStats();
+    if (cs) {
+      L.push('');
+      L.push(`Ciclo finora: ${cs.done} sedute fatte, ${cs.skipped.length} saltate, ${cs.extra} recuperi o spostate.`);
+      const top = Object.keys(cs.miss).sort((a, b) => cs.miss[b] - cs.miss[a]).slice(0, 4);
+      if (top.length) L.push(`Esercizi saltati più spesso: ${top.map((n) => `${n} ${cs.miss[n]} su ${cs.seen[n]}`).join('; ')}.`);
     }
 
     const props = [];
@@ -898,7 +993,7 @@
     const done = exDone(exLog(rec, id));
     $$(`[data-card="${CSS.escape(id)}"]`).forEach((card) => {
       card.classList.toggle('is-done', done);
-      const b = card.querySelector('.ex-check');
+      const b = card.querySelector('.ex-done');
       if (b) b.setAttribute('aria-pressed', String(done));
     });
     refreshProgress();
@@ -907,14 +1002,9 @@
     const p = $('#progress');
     if (!p || !S.cur) return;
     const n = $$('.ex.is-done').length;
-    p.textContent = `${n} di ${S.cur.total} esercizi fatti`;
-    const rec = DB.days[S.viewDate];
-    const btn = $('[data-act="done-toggle"]');
-    if (btn) {
-      const dn = recDone(rec);
-      btn.setAttribute('aria-pressed', String(dn));
-      btn.lastElementChild.textContent = dn ? 'Seduta fatta' : 'Segna la seduta come fatta';
-    }
+    p.textContent = `${n} di ${S.cur.total} fatti`;
+    const st = dayStatus(DB.days[S.viewDate]);
+    $$('[data-act="day-status"]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === st)));
   }
 
   /* ---------- eventi ---------- */
@@ -948,11 +1038,17 @@
         save(); refreshCard(id);
         break;
       }
-      case 'done-toggle': {
+      case 'day-status': {
         const rec = touchRec();
-        rec.done = !recDone(rec);
+        const v = t.dataset.v;
+        const cur = dayStatus(rec);
+        if (v === 'done') {
+          if (cur === 'done') rec.done = false; else { rec.done = true; rec.skipped = false; }
+        } else if (cur === 'skipped') rec.skipped = false;
+        else { rec.skipped = true; rec.done = false; }
         save(); refreshProgress();
-        if (rec.done) toast('Seduta segnata come fatta.');
+        const now = dayStatus(rec);
+        toast(now === 'done' ? 'Allenamento segnato come fatto.' : now === 'skipped' ? 'Allenamento segnato come saltato.' : 'Stato tolto.');
         break;
       }
       case 'shoulder': {
@@ -1042,6 +1138,7 @@
       if (v !== el.value) el.value = v;
       l[el.dataset.f] = v;
       if (v && l.done !== true) { l.done = true; l.auto = true; }
+      if (v && rec.skipped) { rec.skipped = false; if (rec.done === false) rec.done = undefined; }
       if (!l.kg && !l.reps && l.auto) { delete l.done; delete l.auto; }
       save(); refreshCard(id);
     } else if (el.matches('input[data-m]')) {

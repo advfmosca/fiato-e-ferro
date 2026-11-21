@@ -316,6 +316,28 @@ a { color: var(--accent-text); }
 .ex.is-done .ex-check-dot .num-in { display: none; }
 
 .ex-title { flex: 1; min-width: 0; }
+.ex-done {
+  position: relative; flex: none;
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 36px; padding: 0 12px 0 10px; margin: -2px -4px 0 0;
+  border-radius: 999px;
+  border: 1.5px solid rgba(127, 140, 136, 0.55);
+  color: var(--ink-2);
+  font-size: 14px; font-weight: 650;
+  transition: transform 120ms var(--ease-out), background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+.ex-done::before { content: ""; position: absolute; inset: -5px -4px; }
+.ex-done .ico { width: 16px; height: 16px; stroke-width: 2.4; }
+.ex-done:active { transform: scale(0.95); }
+.ex-done[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.ex-done:disabled { opacity: 0.45; }
+.ex.is-done .ex-idx { background: var(--accent); color: var(--accent-ink); }
+.input:disabled { opacity: 0.6; }
+.choice-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.choice-btn .ico { width: 18px; height: 18px; stroke-width: 2.3; }
+.choice-btn:disabled { opacity: 0.5; }
+.day-status .kv { align-items: center; }
+.log-day.is-skipped h4 { color: var(--ink-2); }
 .ex-name { margin: 2px 0 0; font-size: 18px; line-height: 1.25; font-weight: 700; letter-spacing: -0.012em; overflow-wrap: anywhere; }
 .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 .tag {
