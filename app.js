@@ -3,7 +3,7 @@
 (() => {
   'use strict';
 
-  const APP_VERSION = '1.0.0';
+  const APP_VERSION = '1.1.0';
   const KEY = 'fef.v1';
   const DAY_MS = 864e5;
   const CIRC = 339.292; // 2 * PI * 54, anello del timer
@@ -26,6 +26,12 @@
   const num = (v) => { const n = parseFloat(String(v == null ? '' : v).replace(',', '.')); return Number.isFinite(n) ? n : null; };
   const fmtN = (n) => n.toLocaleString('it-IT', { maximumFractionDigits: 1 });
   const commas = (v) => String(v).replace('.', ',');
+  const cleanNum = (raw) => {
+    let v = String(raw).replace(/[^\d.,]/g, '').replace(/\./g, ',');
+    const i = v.indexOf(',');
+    if (i > -1) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/,/g, '');
+    return v;
+  };
   const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
   /* ---------- date ---------- */
@@ -66,18 +72,19 @@
 
   function loadDB() {
     let raw = null;
+    try { raw = localStorage.getItem(KEY); } catch (e) { storageOK = false; return; }
+    if (raw) {
+      try {
+        const d = JSON.parse(raw);
+        if (d && typeof d === 'object') for (const k of Object.keys(DB)) if (d[k] && typeof d[k] === 'object') DB[k] = d[k];
+      } catch (e) {
+        try { localStorage.setItem(KEY + '.illeggibile', raw); } catch (e2) { /* ignora */ }
+      }
+    }
     try {
-      raw = localStorage.getItem(KEY);
       localStorage.setItem(KEY + '.probe', '1');
       localStorage.removeItem(KEY + '.probe');
-    } catch (e) { storageOK = false; return; }
-    if (!raw) return;
-    try {
-      const d = JSON.parse(raw);
-      if (d && typeof d === 'object') for (const k of Object.keys(DB)) if (d[k] && typeof d[k] === 'object') DB[k] = d[k];
-    } catch (e) {
-      try { localStorage.setItem(KEY + '.illeggibile', raw); } catch (e2) { /* ignora */ }
-    }
+    } catch (e) { storageOK = false; }
   }
   function save() {
     if (!storageOK) return;
@@ -201,6 +208,7 @@
     const cPrev = typeof sr.cPrev === 'boolean' ? sr.cPrev : cPrevAuto;
     let order = (P.priority || ['A', 'D', 'B', 'C']).filter((s) => req.includes(s));
     if (cPrev && missed.includes('C')) order = ['C'].concat(order.filter((s) => s !== 'C'));
+    if (c.phase && c.phase.noRecovery) return { req, done, manual, missed, cPrev: false, cPrevAuto: false, type: 'pause', session: null, lost: missed };
     const pick = order.find((s) => missed.includes(s)) || null;
     return { req, done, manual, missed, cPrev, cPrevAuto, type: missed.length ? 'recover' : 'free', session: pick, lost: missed.filter((s) => s !== pick) };
   }
@@ -233,12 +241,21 @@
     const last = keys.length ? DB.days[keys[keys.length - 1]].shoulder : null;
     return { n, last, any: keys.length > 0 };
   }
+  function capLoad() {
+    for (const sess of Object.values(P.sessions)) {
+      const e = sess.exercises.find((x) => (x.flags || []).includes('cap'));
+      if (e) return String(e.load).replace(/\s*kg.*$/i, '');
+    }
+    return '';
+  }
   function shoulderText(upto) {
     const s = shoulderStreak(upto);
-    if (!s.any) return 'Tetto a 12,5 + 12,5 finché la spalla non resta silenziosa per tre sedute di fila.';
-    if (s.last === 'talked') return "L'ultima volta ha parlato: il conteggio riparte da zero. Tetto a 12,5 + 12,5.";
-    if (s.n >= 3) return `Silenziosa da ${s.n} sedute di fila. Puoi chiedere a Claude se salire; fino ad allora resta a 12,5 + 12,5.`;
-    return `Silenziosa da ${s.n} ${s.n === 1 ? 'seduta' : 'sedute'} di fila su 3. Il tetto resta 12,5 + 12,5.`;
+    const cap = capLoad();
+    if (!cap) return s.last === 'talked' ? "L'ultima volta la spalla ha parlato." : `Silenziosa da ${s.n} ${s.n === 1 ? 'seduta' : 'sedute'} di fila.`;
+    if (!s.any) return `Tetto a ${cap} finché la spalla non resta silenziosa per tre sedute di fila.`;
+    if (s.last === 'talked') return `L'ultima volta ha parlato: il conteggio riparte da zero. Tetto a ${cap}.`;
+    if (s.n >= 3) return `Silenziosa da ${s.n} sedute di fila. Puoi chiedere a Claude se salire; fino ad allora resta a ${cap}.`;
+    return `Silenziosa da ${s.n} ${s.n === 1 ? 'seduta' : 'sedute'} di fila su 3. Il tetto resta ${cap}.`;
   }
 
   /* ---------- formati degli esercizi ---------- */
@@ -282,7 +299,8 @@
     if (!l || (!l.kg && !l.reps)) return '';
     if (v.cardio) return [l.reps ? `${commas(l.reps)} min` : '', l.kg ? `liv. ${commas(l.kg)}` : ''].filter(Boolean).join(', ');
     if (isBodyweight(v)) return l.reps ? `${commas(l.reps)}${isTimed(v) ? ' s' : ' rip'}` : '';
-    return [l.kg ? `${commas(l.kg)} kg` : '', l.reps ? `× ${commas(l.reps)}` : ''].filter(Boolean).join(' ');
+    if (!l.kg) return `${commas(l.reps)} rip`;
+    return [`${commas(l.kg)} kg`, l.reps ? `× ${commas(l.reps)}` : ''].filter(Boolean).join(' ');
   }
   const field = (id, f, label, val, ph, mode) =>
     `<label class="field"><span class="field-l">${esc(label)}</span><input class="input" type="text" inputmode="${mode}" autocomplete="off" autocorrect="off" enterkeyhint="done" maxlength="8" data-ex="${esc(id)}" data-f="${f}" value="${esc(val || '')}" placeholder="${esc(ph || '')}"></label>`;
@@ -296,7 +314,7 @@
     if (flags.includes('keep')) tags.push('<span class="tag tag-keep">Non si toglie</span>');
     if (flags.includes('cap')) tags.push('<span class="tag tag-cap">Tetto</span>');
     if (flags.includes('proposal')) tags.push('<span class="tag tag-proposal">Carico da confermare</span>');
-    if (flags.includes('new')) tags.push('<span class="tag tag-new">Nuovo</span>');
+    if (flags.includes('new') && (c.block || 1) === 1) tags.push('<span class="tag tag-new">Nuovo</span>');
 
     let nums;
     if (v.cardio) {
@@ -311,6 +329,7 @@
     }
 
     let callout = v.callout || '';
+    const calib = flags.includes('new') && c.week === 1 && !c.pause && !c.ref;
     if (v.id === 'shoulder-press-a' && o.date) callout = shoulderText(o.date);
 
     const rs = restSecs(v.rest);
@@ -348,6 +367,8 @@
       <div class="ex-nums">${nums}</div>
       ${v.note ? `<p class="ex-note">${esc(v.note)}</p>` : ''}
       ${callout ? `<p class="ex-callout">${esc(callout)}</p>` : ''}
+      ${calib ? `<p class="ex-callout ex-calib">${esc(P.rules.calibration)}</p>` : ''}
+      ${v.how ? `<details class="ex-how"><summary>Come si esegue</summary><p>${esc(v.how)}</p></details>` : ''}
       <div class="ex-actions">${actions.join('')}</div>
       ${log}
     </article>`;
@@ -376,7 +397,7 @@
 
   function banners(c, date) {
     let h = '';
-    if (c.deload) h += `<div class="banner banner-warn">${ico('alert')}<div><strong>Settimana di scarico.</strong> Serie ridotte del 40%, carichi invariati.</div></div>`;
+    if (c.deload) h += `<div class="banner banner-warn">${ico('alert')}<div>${esc(P.deload.banner)}</div></div>`;
     if (c.pause) h += `<div class="banner banner-warn">${ico('alert')}<div>${esc(c.phase.banner)}</div></div>`;
     if (P.checks.includes(date)) h += `<div class="banner">${ico('log')}<div><strong>Controllo di fine blocco.</strong> Misure, circonferenza spalle e riferimenti di forza: li trovi qui sotto.</div></div>`;
     return h;
@@ -409,7 +430,7 @@
     h += seg('variant', [['full', 'Completa'], ['short', '30 min'], ['bw', 'Corpo libero']], variant, 'Versione della seduta');
     if (variant === 'bw') h += `<div class="banner">${ico('bag')}<div>${esc(P.bodyweight.rule)}</div></div>`;
     if (variant === 'short') h += `<div class="banner">${ico('timer')}<div>Versione corta per le mattine strette. Rotazioni esterne e face pull restano sempre.</div></div>`;
-    if (date === S.today && !recDone(rec)) h += `<div class="banner">${ico('timer')}<div>Caffè doppio 30-45 min prima. Nell'ora prima niente grassi, fibre o barrette.</div></div>`;
+    if (date === S.today && !recDone(rec)) h += `<div class="banner">${ico('timer')}<div>Caffè doppio 30-45 min prima, niente grassi, fibre o barrette nell'ora prima. ${variant === 'bw' ? '' : esc(P.rules.warmup)}</div></div>`;
 
     h += list.map((e, i) => exCard(e, c, i, { rec, date, editable })).join('');
 
@@ -470,18 +491,20 @@
     const rv = recovery(date);
     const chips = rv.req.map((s) => `<button type="button" class="sess-chip" data-act="sat-chip" data-s="${s}" aria-pressed="${rv.done.has(s)}" ${editable ? '' : 'disabled'}><b>${s}</b><span>${esc(P.sessions[s].day.slice(0, 3))}</span></button>`).join('');
     let result;
-    if (rv.type === 'free') {
+    if (rv.type === 'pause') {
+      result = `<div class="result"><p class="result-k">Pausa festiva</p><p class="result-v">Weekend libero</p><p class="result-s">${rv.missed.length ? `${rv.missed.length > 1 ? 'Saltate' : 'Saltata'}: ${esc(rv.missed.join(', '))}. ${rv.missed.length > 1 ? 'Si perdono' : 'Si perde'}, e va bene così.` : 'Settimana di mantenimento completa.'} Lunedì si riparte.</p></div>`;
+    } else if (rv.type === 'free') {
       result = `<div class="result"><p class="result-k">Risultato</p><p class="result-v">Weekend libero</p><p class="result-s">Settimana completa: ${rv.req.length} su ${rv.req.length}.</p></div>`;
     } else {
       const t = P.sessions[rv.session];
       const lost = rv.lost.length ? ` Le altre si perdono: ${rv.lost.join(', ')}.` : '';
       result = `<div class="result"><p class="result-k">Stamattina recuperi</p><p class="result-v">${esc(t.name)}, ${esc(low(t.title))}</p><p class="result-s">Identica, stessi carichi.${esc(lost)}</p></div>`;
     }
-    const showCPrev = rv.req.includes('C') && rv.missed.includes('C') && rv.missed.length >= 2;
+    const showCPrev = rv.type === 'recover' && rv.req.includes('C') && rv.missed.includes('C') && rv.missed.length >= 2 && ctx(addDays(monday(date), -7)).status === 'in';
     const predicted = rv.done.size + (rv.type === 'recover' ? 1 : 0);
     let h = `<div class="session-head">
-      <p class="eyebrow">Sabato · slot di recupero</p>
-      <h1 class="h1">${rv.type === 'free' ? 'Weekend libero' : `Recupera la ${esc(P.sessions[rv.session].name)}`}</h1>
+      <p class="eyebrow">${rv.type === 'pause' ? 'Sabato · pausa festiva' : 'Sabato · slot di recupero'}</p>
+      <h1 class="h1">${rv.type === 'recover' ? `Recupera la ${esc(P.sessions[rv.session].name)}` : rv.type === 'pause' ? 'Niente recuperi' : 'Weekend libero'}</h1>
       <p class="session-sub">Prima le misure, a digiuno.</p>
     </div>`;
     h += measuresCard(date, editable);
@@ -580,12 +603,12 @@
     h += `<div class="session-head"><p class="eyebrow">${esc(sess.day)} · ${esc(sess.name)}</p><h1 class="h1">${esc(sess.title)}</h1>
       <p class="session-sub">${list.length} esercizi${c.ref ? '' : ` · valori della settimana ${c.pause ? 'di pausa' : c.week}`}</p></div>`;
     h += seg('schedeVar', [['full', 'Completa'], ['short', 'Versione da 30 min']], S.schedeVar, 'Versione');
-    if (c.deload) h += `<div class="banner banner-warn">${ico('alert')}<div><strong>Settimana di scarico:</strong> serie già ridotte del 40%.</div></div>`;
+    if (c.deload) h += `<div class="banner banner-warn">${ico('alert')}<div>${esc(P.deload.banner)} Valori già ridotti.</div></div>`;
     if (c.pause) h += `<div class="banner banner-warn">${ico('alert')}<div>Pausa festiva: serie già ridotte di un terzo.</div></div>`;
     h += list.map((e, i) => exCard(e, c, i, { editable: false })).join('');
     const tc = ctx(S.today);
     const todays = tc.status === 'in' ? sessionFor(S.today) : null;
-    if (tc.status === 'in' && (!todays || todays.id !== id)) {
+    if (tc.status === 'in' && tc.wd !== 0 && tc.required.includes(id) && (!todays || todays.id !== id)) {
       h += `<button type="button" class="btn btn-soft btn-block" data-act="force" data-s="${id}" style="margin:4px 0 8px">Falla oggi al posto del calendario</button>
         <p class="footer-note" style="margin-top:4px">Ricorda: si recupera il sabato la seduta che manca, mai due sedute in un giorno, mai due giorni di gambe di fila.</p>`;
     }
@@ -610,7 +633,8 @@
       <ul class="bullets">${P.rules.saturday.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>
       <p class="field-l" style="margin-top:16px">Scala di priorità</p><ol class="prio">${pr}</ol>
       <p class="muted small" style="margin-top:10px">${esc(P.rules.priorityNote)}</p>
-      <p class="muted small">${esc(P.rules.threeDays)}</p></section>`;
+      <p class="muted small">${esc(P.rules.threeDays)}</p></section>
+      <h2 class="h2">Come si sale di carico</h2><section class="card"><p>${esc(P.rules.progression)}</p><p class="muted small">${esc(P.rules.warmup)}</p></section>`;
   }
   function constraintsCard() {
     return `<h2 class="h2">Vincoli fissi</h2><section class="card"><ul class="bullets">${P.rules.constraints.map((r) => `<li>${esc(r)}</li>`).join('')}</ul></section>`;
@@ -819,7 +843,8 @@
       const d = S.viewDate;
       const c = ctx(d);
       const rel = relLabel(d);
-      const meta = c.status === 'before' ? `${rel ? rel + ' · ' : ''}${P.cycle.name} parte ${low(fmtLong(P.cycle.start))}` : `${rel ? rel + ' · ' : ''}${weekLabel(c)}`;
+      const short = c.status !== 'in' ? weekLabel(c) : c.pause ? `Pausa festiva ${c.pauseWeek}/${c.pauseWeeks}` : `Sett. ${c.week}/12 · ${c.deload ? 'scarico' : c.phase.label}`;
+      const meta = c.status === 'before' ? `${rel ? rel + ' · ' : ''}${P.cycle.name} parte ${low(fmtLong(P.cycle.start))}` : `${rel ? rel + ' · ' : ''}${short}`;
       top.innerHTML = `<div class="top-row">
         <button type="button" class="icon-btn" data-act="day-prev" aria-label="Giorno precedente">${ico('left')}</button>
         <div class="top-text"><p class="top-title">${esc(fmtLong(d))}</p><p class="top-meta">${esc(meta)}</p></div>
@@ -829,7 +854,8 @@
     } else {
       const titles = { schede: 'Schede', viaggio: 'Viaggio', registro: 'Registro', cibo: 'Cibo e integratori' };
       const metas = { schede: `${P.cycle.name} · ${weekLabel(ctx(S.today))}`, viaggio: 'Senza attrezzi, 25 minuti', registro: 'Kg, ripetizioni e misure', cibo: 'Cena, colazione, integratori' };
-      top.innerHTML = `<div class="top-row" style="padding-left:4px"><div class="top-text"><h1 class="top-title">${esc(titles[S.tab])}</h1><p class="top-meta">${esc(metas[S.tab])}</p></div></div>`;
+      const tag = S.tab === 'schede' || S.tab === 'viaggio' ? 'p' : 'h1';
+      top.innerHTML = `<div class="top-row" style="padding-left:4px"><div class="top-text"><${tag} class="top-title">${esc(titles[S.tab])}</${tag}><p class="top-meta">${esc(metas[S.tab])}</p></div></div>`;
     }
   }
 
@@ -918,6 +944,7 @@
         const id = t.dataset.ex;
         const l = rec.ex[id] || (rec.ex[id] = {});
         l.done = !exDone(l);
+        delete l.auto;
         save(); refreshCard(id);
         break;
       }
@@ -982,6 +1009,7 @@
           if (ok) toast('Copiato. Incollalo in chat a Claude.');
           else {
             toast('Non riesco a copiare: tieni premuto sul testo e copialo.');
+            if (!$('#previewBox')) { S.tab = 'registro'; S.regWeek = t.dataset.mon; render(); }
             const box = $('#previewBox');
             if (box) { box.open = true; box.scrollIntoView({ block: 'center' }); }
           }
@@ -1010,14 +1038,15 @@
       const rec = touchRec();
       const id = el.dataset.ex;
       const l = rec.ex[id] || (rec.ex[id] = {});
-      const v = el.value.replace(/[^\d.,]/g, '');
+      const v = cleanNum(el.value);
       if (v !== el.value) el.value = v;
       l[el.dataset.f] = v;
-      if (v) l.done = true;
+      if (v && l.done !== true) { l.done = true; l.auto = true; }
+      if (!l.kg && !l.reps && l.auto) { delete l.done; delete l.auto; }
       save(); refreshCard(id);
     } else if (el.matches('input[data-m]')) {
       const d = el.dataset.date;
-      const v = el.value.replace(/[^\d.,]/g, '');
+      const v = cleanNum(el.value);
       if (v !== el.value) el.value = v;
       const m = DB.measures[d] || (DB.measures[d] = {});
       m[el.dataset.m] = v;
@@ -1137,11 +1166,14 @@
     sheet.classList.remove('is-closing'); scrim.classList.remove('is-closing');
     sheet.style.transform = '';
     scrim.hidden = false; sheet.hidden = false;
+    $('#app').inert = true; $('#tabbar').inert = true; pill.inert = true;
+    setTimeout(() => { try { $('#timerStop').focus({ preventScroll: true }); } catch (e) { /* ignora */ } }, 50);
   }
   let closeT = 0;
   function closeSheet() {
     if (sheet.hidden) return;
     sheet.style.transform = '';
+    $('#app').inert = false; $('#tabbar').inert = false; pill.inert = false;
     sheet.classList.add('is-closing'); scrim.classList.add('is-closing');
     clearTimeout(closeT);
     closeT = setTimeout(() => {
@@ -1164,6 +1196,7 @@
     try {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
+      try { if (navigator.audioSession) navigator.audioSession.type = 'transient'; } catch (e) { /* non supportato */ }
       T.ac = T.ac || new AC();
       if (T.ac.state === 'suspended') T.ac.resume();
     } catch (e) { /* niente audio */ }
@@ -1214,11 +1247,13 @@
     if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
     const hadController = !!navigator.serviceWorker.controller;
     let reloading = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!hadController || reloading) return;
+    const doReload = () => {
+      if (T.running || T.over) { setTimeout(doReload, 3000); return; }
+      if (reloading) return;
       reloading = true;
       location.reload();
-    });
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController) doReload(); });
     navigator.serviceWorker.register('sw.js').then((reg) => {
       document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
     }).catch(() => { /* senza offline */ });
