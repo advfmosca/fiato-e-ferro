@@ -3,7 +3,7 @@
 (() => {
   'use strict';
 
-  const APP_VERSION = '1.2.0';
+  const APP_VERSION = '1.3.0';
   const KEY = 'fef.v1';
   const DAY_MS = 864e5;
   const CIRC = 339.292; // 2 * PI * 54, anello del timer
@@ -99,7 +99,7 @@
   };
   const exLog = (rec, id) => (rec && rec.ex && rec.ex[id]) || null;
   const exDone = (l) => !!l && (l.done != null ? !!l.done : !!(l.kg || l.reps));
-  const recHasData = (r) => !!r && Object.values(r.ex || {}).some((l) => l && (l.done || l.kg || l.reps));
+  const recHasData = (r) => !!r && Object.values(r.ex || {}).some((l) => l && (l.done || l.kg || l.reps || l.sets));
   const recDone = (r) => !!r && !r.skipped && (r.done != null ? !!r.done : recHasData(r));
   const dayStatus = (r) => (r && r.skipped ? 'skipped' : recDone(r) ? 'done' : '');
 
@@ -297,7 +297,13 @@
     return null;
   }
   function logText(v, l) {
-    if (!l || (!l.kg && !l.reps)) return '';
+    if (!l) return '';
+    const setsTxt = l.sets ? `${l.sets}/${l.setsOf || v.sets || l.sets} serie` : '';
+    if (!l.kg && !l.reps) return setsTxt;
+    const base = logTextNums(v, l);
+    return setsTxt ? `${base} · ${setsTxt}` : base;
+  }
+  function logTextNums(v, l) {
     if (v.cardio) return [l.reps ? `${commas(l.reps)} min` : '', l.kg ? `liv. ${commas(l.kg)}` : ''].filter(Boolean).join(', ');
     if (isBodyweight(v)) return l.reps ? `${commas(l.reps)}${isTimed(v) ? ' s' : ' rip'}` : '';
     if (!l.kg) return `${commas(l.reps)} rip`;
@@ -360,6 +366,12 @@
       log = `<div class="ex-log${fields.length === 1 ? ' single' : ''}">${fields.join('')}${lastTxt}</div>`;
     }
 
+    let setsRow = '';
+    if ((o.editable || o.future) && !v.cardio && v.sets) {
+      const n = (l && l.sets) || 0;
+      const dots = Array.from({ length: v.sets }, (_, k) => `<button type="button" class="set-dot" data-act="set" data-ex="${esc(v.id)}" data-k="${k + 1}" data-total="${v.sets}" aria-pressed="${k < n}" aria-label="Serie ${k + 1} di ${v.sets}"${off ? ' disabled' : ''}>${k + 1}</button>`).join('');
+      setsRow = `<div class="sets"><span class="field-l">Serie fatte</span><div class="set-dots">${dots}</div></div>`;
+    }
     const doneBtn = o.editable || o.future
       ? `<button type="button" class="ex-done" data-act="ex-toggle" data-ex="${esc(v.id)}" aria-pressed="${done}" aria-label="${esc(v.name)}: fatto"${off ? ' disabled' : ''}>${ico('check')}<span>Fatto</span></button>`
       : '';
@@ -371,6 +383,7 @@
       ${callout ? `<p class="ex-callout">${esc(callout)}</p>` : ''}
       ${calib ? `<p class="ex-callout ex-calib">${esc(P.rules.calibration)}</p>` : ''}
       ${v.how ? `<details class="ex-how"><summary>Come si esegue</summary><p>${esc(v.how)}</p></details>` : ''}
+      ${setsRow}
       <div class="ex-actions">${actions.join('')}</div>
       ${log}
     </article>`;
@@ -1036,6 +1049,31 @@
         l.done = !exDone(l);
         delete l.auto;
         save(); refreshCard(id);
+        break;
+      }
+      case 'set': {
+        const rec = touchRec();
+        const id = t.dataset.ex;
+        const k = +t.dataset.k;
+        const total = +t.dataset.total;
+        const l = rec.ex[id] || (rec.ex[id] = {});
+        const cur = l.sets || 0;
+        l.sets = k > cur ? k : k - 1;
+        l.setsOf = total;
+        if (l.sets >= total && l.done !== true) { l.done = true; l.auto = true; }
+        if (l.sets < total && l.auto && !l.kg && !l.reps) { l.done = undefined; l.auto = undefined; }
+        if (rec.skipped && l.sets) { rec.skipped = false; if (rec.done === false) rec.done = undefined; }
+        save();
+        const card = t.closest('.ex');
+        if (card) card.querySelectorAll('.set-dot').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.k <= l.sets)));
+        refreshCard(id);
+        if (l.sets > cur && l.sets < total && card) {
+          const chip = card.querySelector('[data-act="timer-start"]');
+          if (chip) {
+            const presets = chip.dataset.rest.split(',').map(Number);
+            timerStart(presets[0], `${chip.dataset.name} · dopo la serie ${l.sets} di ${total}`, presets);
+          }
+        } else if (l.sets >= total) toast('Esercizio completato.');
         break;
       }
       case 'day-status': {
