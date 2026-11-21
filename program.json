@@ -1,0 +1,222 @@
+{
+  "version": "2026-11-21",
+  "cycle": {
+    "name": "Ciclo 2",
+    "goal": "Spessore su petto e spalle, punto vita più stretto",
+    "start": "2026-11-23",
+    "end": "2027-02-28"
+  },
+
+  "schedule": { "0": "sun", "1": "A", "2": "B", "3": "rest", "4": "C", "5": "D", "6": "sat" },
+
+  "phases": [
+    { "id": "b1", "label": "Blocco 1", "block": 1, "from": "2026-11-23", "to": "2026-12-20", "firstWeek": 1, "deloadWeek": 4 },
+    {
+      "id": "pausa", "label": "Pausa festiva", "pause": true, "from": "2026-12-21", "to": "2027-01-03",
+      "effectiveBlock": 1, "effectiveWeek": 4,
+      "schedule": { "1": "A", "2": "rest", "3": "rest", "4": "C", "5": "rest" },
+      "sets": { "factor": 0.67, "rounding": "round", "min": 2 },
+      "banner": "Pausa festiva: solo A (lunedì) e C (giovedì), serie ridotte di un terzo, carichi fermi, nessuna progressione."
+    },
+    { "id": "b2", "label": "Blocco 2", "block": 2, "from": "2027-01-04", "to": "2027-01-31", "firstWeek": 5, "deloadWeek": 8 },
+    { "id": "b3", "label": "Blocco 3", "block": 3, "from": "2027-02-01", "to": "2027-02-28", "firstWeek": 9, "deloadWeek": 12 }
+  ],
+
+  "deload": {
+    "sets": { "factor": 0.6, "rounding": "floor", "min": 2 },
+    "banner": "Settimana di scarico: serie ridotte del 40%, carichi invariati."
+  },
+
+  "checks": ["2026-12-19", "2027-01-30", "2027-02-27"],
+
+  "priority": ["A", "D", "B", "C"],
+
+  "sessions": {
+    "A": {
+      "name": "Scheda A",
+      "title": "Petto e spalle, pesante",
+      "day": "Lunedì",
+      "push": true,
+      "tag": "Intoccabile",
+      "bodyweight": "spinta",
+      "short": ["rot-est", "panca-piana", "shoulder-press-a", "alzate-laterali"],
+      "exercises": [
+        { "id": "rot-est", "name": "Rotazioni esterne ai cavi", "sets": 2, "reps": "15 per lato", "load": "2,5 kg", "rest": "30 s", "note": "Riscaldamento cuffia, obbligatorio.", "flags": ["new", "keep"] },
+        { "id": "panca-piana", "name": "Panca piana con manubri", "sets": 4, "reps": "6-10", "load": "22,5 + 22,5 kg", "rest": "2-3 min", "note": "Discesa 2-3 s, mezzo secondo a petto." },
+        { "id": "panca-inclinata", "name": "Panca inclinata 30° con manubri", "sets": 4, "reps": "8-12", "load": "17,5 + 17,5 kg", "rest": "2 min", "note": "Parte alta del petto." },
+        { "id": "shoulder-press-a", "name": "Shoulder press con manubri", "sets": 3, "reps": "8-10", "load": "12,5 + 12,5 kg", "rest": "2 min", "note": "Non salire: è il tetto finché la spalla sinistra non resta silenziosa per tre sedute di fila.", "flags": ["cap", "shoulder"] },
+        { "id": "croci-cavi-alti", "name": "Croci ai cavi alti", "sets": 3, "reps": "12-15", "load": "70 kg", "rest": "90 s", "note": "Fermo 1 s in chiusura." },
+        { "id": "alzate-laterali", "name": "Alzate laterali con manubri", "sets": 4, "reps": "12-15", "load": "6 + 6 kg", "rest": "75 s", "note": "Esercizio principale, non di coda." },
+        { "id": "panca-stretta", "name": "Panca stretta con bilanciere", "sets": 3, "reps": "8-10", "load": "30 kg (20 + 5 + 5)", "rest": "2 min", "note": "Sostituisce le dip: in palestra non ci sono le parallele.", "flags": ["new"] },
+        { "id": "push-down", "name": "Push-down ai cavi", "sets": 3, "reps": "10-15", "load": "70 kg", "rest": "75 s", "note": "Il primo da saltare se manca tempo." },
+        { "id": "pallof", "name": "Pallof press ai cavi", "sets": 3, "reps": "10 per lato", "load": "10 kg", "rest": "60 s", "note": "Anti-rotazione.", "flags": ["new"] }
+      ]
+    },
+
+    "B": {
+      "name": "Scheda B",
+      "title": "Dorso, braccia, core",
+      "day": "Martedì",
+      "bodyweight": "gambe",
+      "short": ["lat-larga", "rematore", "face-pull", "curl-manubri"],
+      "exercises": [
+        { "id": "lat-larga", "name": "Lat machine presa larga", "sets": 4, "reps": "6-10", "load": "35 kg", "rest": "2-3 min", "note": "Dorso largo, vita che sembra più stretta." },
+        { "id": "rematore", "name": "Rematore con manubrio", "sets": 3, "reps": "8-12 per lato", "load": "25 kg", "rest": "2 min", "note": "Tira verso l'anca." },
+        { "id": "pulley-basso-inversa", "name": "Pulley basso presa inversa", "sets": 3, "reps": "10-12", "load": "35 kg", "rest": "90 s", "flags": ["proposal"] },
+        { "id": "face-pull", "name": "Face pull", "sets": 4, "reps": "15", "load": "15 kg", "rest": "60 s", "note": "Mai saltarlo.", "flags": ["keep"] },
+        { "id": "reverse-pec-deck", "name": "Alzate posteriori / reverse pec deck", "sets": 3, "reps": "15", "load": "20 kg", "rest": "60 s", "flags": ["proposal"], "video": "reverse pec deck" },
+        { "id": "curl-manubri", "name": "Curl con manubri", "sets": 3, "reps": "10-12", "load": "12,5 + 12,5 kg", "rest": "60 s", "note": "Fermo da giugno: va mosso." },
+        { "id": "curl-martello", "name": "Curl a martello", "sets": 2, "reps": "12", "load": "10 + 10 kg", "rest": "60 s", "flags": ["proposal"] },
+        { "id": "plank-laterale", "name": "Plank laterale", "sets": 3, "reps": "25 s per lato", "load": "corpo libero", "rest": "45 s", "note": "Obiettivo 25 s, non il massimo.", "flags": ["new"] },
+        { "id": "coda-b", "name": "Coda aerobica", "cardio": true, "duration": "10-12 min", "load": "Cyclette liv. 5-6 · tapis 6,5 km/h", "rest": "", "note": "RPE 5-6: riesci a parlare a frasi intere.", "video": "cyclette intensità moderata", "overrides": [ { "fromBlock": 2, "duration": "10-15 min", "note": "RPE 5-6. Dal blocco 2 puoi salire fino a 15 min." } ] }
+      ]
+    },
+
+    "C": {
+      "name": "Scheda C",
+      "title": "Gambe e core",
+      "day": "Giovedì",
+      "legs": true,
+      "bodyweight": "gambe",
+      "short": ["pressa", "hip-thrust", "leg-curl", "dead-bug"],
+      "exercises": [
+        { "id": "pressa", "name": "Pressa 45°", "sets": 4, "reps": "8-12", "load": "120 kg", "rest": "2-3 min", "note": "Prima serie di avvicinamento a 80 kg." },
+        { "id": "hip-thrust", "name": "Hip thrust al multipower o alla macchina", "sets": 3, "reps": "10-12", "load": "40 kg", "rest": "2 min", "note": "Sostituisce lo stacco rumeno, escluso dal 7 ottobre.", "flags": ["new"], "video": "hip thrust multipower" },
+        { "id": "leg-extension", "name": "Leg extension", "sets": 3, "reps": "10-12", "load": "55 kg", "rest": "90 s" },
+        { "id": "leg-curl", "name": "Leg curl", "sets": 3, "reps": "10-12", "load": "50 kg", "rest": "90 s", "callout": "Regolazione: posizione sotto 3, posizione sedia 5." },
+        { "id": "affondi", "name": "Affondi camminati", "sets": 3, "reps": "10 per gamba", "load": "corpo libero", "rest": "90 s", "note": "La prima settimana senza carico.", "overrides": [ { "fromWeek": 2, "load": "8 + 8 kg", "note": "Con i manubri da 8." } ] },
+        { "id": "calf-pressa", "name": "Calf alla pressa", "sets": 4, "reps": "12-15", "load": "60 kg", "rest": "60 s", "note": "Fermo 1 s in basso.", "flags": ["new"] },
+        { "id": "dead-bug", "name": "Dead bug", "sets": 3, "reps": "8 per lato", "load": "corpo libero", "rest": "45 s", "note": "Lombare sempre a terra.", "flags": ["new"] },
+        { "id": "hollow-hold", "name": "Hollow hold", "sets": 3, "reps": "15 s", "load": "corpo libero", "rest": "45 s", "note": "Dal blocco 2 si passa a 30 s.", "flags": ["new"], "overrides": [ { "fromBlock": 2, "reps": "30 s", "note": "Blocco 2 e 3: 30 s." } ] }
+      ]
+    },
+
+    "D": {
+      "name": "Scheda D",
+      "title": "Richiamo petto e spalle, dorso alto, core",
+      "day": "Venerdì",
+      "push": true,
+      "bodyweight": "spinta",
+      "short": ["rot-est", "chest-press", "alzate-cavi", "vacuum"],
+      "exercises": [
+        { "id": "rot-est", "name": "Rotazioni esterne ai cavi", "sets": 2, "reps": "15 per lato", "load": "2,5 kg", "rest": "30 s", "note": "Anche oggi si spinge: riscaldamento cuffia obbligatorio.", "flags": ["new", "keep"] },
+        { "id": "chest-press", "name": "Chest press alla macchina", "sets": 4, "reps": "10-12", "load": "45 kg", "rest": "2 min" },
+        { "id": "croci-inclinata", "name": "Croci su panca inclinata con manubri", "sets": 3, "reps": "12-15", "load": "8 + 8 kg", "rest": "90 s", "note": "Allungamento, non carico.", "flags": ["proposal"] },
+        { "id": "alzate-cavi", "name": "Alzate laterali ai cavi, un braccio", "sets": 4, "reps": "12-15 per lato", "load": "5 kg", "rest": "60 s", "flags": ["proposal"] },
+        { "id": "shoulder-press-d", "name": "Shoulder press con manubri o alla macchina", "sets": 3, "reps": "10-12", "load": "10 + 10 kg", "rest": "90 s", "note": "Più leggero del lunedì, di proposito.", "callout": "Se la spalla sinistra parla, è il primo esercizio da togliere.", "flags": ["shoulder"], "video": "shoulder press manubri" },
+        { "id": "pulley-alto-neutra", "name": "Pulley alto presa neutra", "sets": 3, "reps": "10-12", "load": "35 kg", "rest": "90 s", "flags": ["proposal"], "video": "lat machine presa neutra" },
+        { "id": "french-press-cavi", "name": "French press ai cavi", "sets": 3, "reps": "12", "load": "25 kg", "rest": "60 s", "note": "Gomiti fermi.", "flags": ["proposal"] },
+        { "id": "vacuum", "name": "Vacuum addominale", "sets": 3, "reps": "10 s", "load": "a digiuno", "rest": "30 s", "note": "Contenimento del girovita.", "flags": ["new"] },
+        { "id": "coda-d", "name": "Coda aerobica", "cardio": true, "duration": "10-12 min", "load": "Cyclette liv. 5-6 · tapis 6,5 km/h", "rest": "", "note": "RPE 5-6: riesci a parlare a frasi intere.", "video": "cyclette intensità moderata", "overrides": [ { "fromBlock": 2, "duration": "10-15 min", "note": "RPE 5-6. Dal blocco 2 puoi salire fino a 15 min." } ] }
+      ]
+    }
+  },
+
+  "bodyweight": {
+    "spinta": {
+      "name": "Corpo libero · Spinta",
+      "duration": "25 min",
+      "replaces": "A e D",
+      "exercises": [
+        { "id": "bw-ytw", "name": "Y-T-W a terra", "sets": 2, "reps": "10 per lettera", "load": "corpo libero", "rest": "30 s", "video": "YTW a terra prono" },
+        { "id": "bw-piegamenti-letto", "name": "Piegamenti con i piedi sul letto", "sets": 4, "reps": "12", "load": "corpo libero", "rest": "90 s", "note": "Discesa in 3 s.", "video": "piegamenti piedi rialzati" },
+        { "id": "bw-pike", "name": "Pike push-up", "sets": 3, "reps": "8-10", "load": "corpo libero", "rest": "90 s" },
+        { "id": "bw-piegamenti-larghi", "name": "Piegamenti mani larghe con fermo", "sets": 3, "reps": "10", "load": "corpo libero", "rest": "75 s", "note": "Fermo 2 s in basso.", "video": "piegamenti presa larga" },
+        { "id": "bw-dip-sedia", "name": "Dip sulla sedia", "sets": 3, "reps": "12-15", "load": "corpo libero", "rest": "60 s" },
+        { "id": "bw-plank-laterale", "name": "Plank laterale", "sets": 3, "reps": "25 s per lato", "load": "corpo libero", "rest": "45 s" },
+        { "id": "bw-hollow", "name": "Hollow hold", "sets": 3, "reps": "15 s", "load": "corpo libero", "rest": "45 s" }
+      ]
+    },
+    "gambe": {
+      "name": "Corpo libero · Gambe e dorso",
+      "duration": "25 min",
+      "replaces": "B e C",
+      "exercises": [
+        { "id": "bw-bulgaro", "name": "Split squat bulgaro, piede sul letto", "sets": 4, "reps": "10 per gamba", "load": "corpo libero", "rest": "90 s", "video": "split squat bulgaro" },
+        { "id": "bw-hip-thrust-mono", "name": "Hip thrust monopodalico", "sets": 3, "reps": "12 per gamba", "load": "corpo libero", "rest": "60 s" },
+        { "id": "bw-nordic", "name": "Nordic curl assistito", "sets": 3, "reps": "5 discese lente", "load": "corpo libero", "rest": "90 s" },
+        { "id": "bw-rematore-tavolo", "name": "Rematore orizzontale sotto un tavolo", "sets": 4, "reps": "10-12", "load": "corpo libero", "rest": "90 s", "video": "inverted row sotto il tavolo" },
+        { "id": "bw-calf-mono", "name": "Calf monopodalico su un gradino", "sets": 3, "reps": "15 per gamba", "load": "corpo libero", "rest": "45 s" },
+        { "id": "bw-dead-bug", "name": "Dead bug", "sets": 3, "reps": "8 per lato", "load": "corpo libero", "rest": "45 s" },
+        { "id": "bw-vacuum", "name": "Vacuum addominale", "sets": 3, "reps": "10 s", "load": "a digiuno", "rest": "45 s" }
+      ]
+    },
+    "rule": "In viaggio non si progredisce, si mantiene. Al rientro riparti dai carichi di prima, non un chilo sopra."
+  },
+
+  "measures": {
+    "weekly": [
+      { "id": "peso", "label": "Peso", "unit": "kg", "hint": "Conta solo la media a 4 settimane" },
+      { "id": "vita", "label": "Vita all'ombelico", "unit": "cm" },
+      { "id": "fianchi", "label": "Fianchi, punto più largo", "unit": "cm" },
+      { "id": "torace", "label": "Torace", "unit": "cm" }
+    ],
+    "check": [
+      { "id": "spalle", "label": "Spalle, punta dei deltoidi", "unit": "cm" },
+      { "id": "f-panca", "label": "Panca piana manubri, 8 rip", "unit": "kg" },
+      { "id": "f-lat", "label": "Lat machine presa inversa, 8 rip", "unit": "kg" },
+      { "id": "f-pressa", "label": "Pressa, 8 rip", "unit": "kg" }
+    ],
+    "photo": "Foto frontale e laterale",
+    "target": "Obiettivo realistico a 12 settimane: vita −2/4 cm, spalle +1/2 cm, panca piana a 25 + 25."
+  },
+
+  "food": {
+    "dinner": {
+      "0": "Carboidrati moderati e proteine.",
+      "1": "Normale.",
+      "2": "Carboidrati ridotti, proteine e verdure.",
+      "3": "Porzione piena di carboidrati, pochi grassi e poche fibre: domani le gambe.",
+      "4": "Normale, con una buona quota di proteine.",
+      "5": "Carboidrati moderati.",
+      "6": "Carboidrati ridotti, proteine e verdure."
+    },
+    "dinnerNote": "La cena è il pre-allenamento della mattina dopo.",
+    "breakfastGoal": "Colazione dopo l'allenamento: 30-40 g di proteine.",
+    "breakfast": [
+      "Yogurt greco 170 g, avena 30 g e frutta (più un misurino, se serve).",
+      "3 uova strapazzate e 2 fette di pane tostato.",
+      "Ricotta 200 g con miele e pane.",
+      "Pancake proteici con burro d'arachidi.",
+      "Affettato magro nel pane (non ogni giorno: è molto salato).",
+      "Latte proteico, cereali e parmigiano."
+    ],
+    "before": [
+      "Quasi a digiuno va bene.",
+      "Se hai fame: solo carboidrati veloci, pochi, 30-40 minuti prima.",
+      "Nell'ora prima mai grassi, fibre o barrette proteiche."
+    ],
+    "supplements": [
+      { "name": "Creatina monoidrato", "short": "creatina 3-5 g", "dose": "3-5 g", "when": "Tutti i giorni, orario indifferente." },
+      { "name": "Caffè doppio", "short": "caffè doppio", "dose": "", "when": "30-45 minuti prima, nei quattro giorni di palestra.", "trainingOnly": true },
+      { "name": "Bio Ashwagandha KSM-66 (Natural Elements)", "short": "Ashwagandha", "dose": "1 dose", "when": "La sera, lontano dal caffè.", "evening": true },
+      { "name": "Calcio Complex con magnesio, zinco e vitamina D3 KS-360 (Natural Elements)", "short": "Calcio Complex", "dose": "1 dose", "when": "La sera a stomaco pieno, lontano dal caffè. Copre già la vitamina D: niente altra D senza esami (25-OH-vitamina D).", "evening": true }
+    ],
+    "never": [
+      "Niente beta-alanina: senza le ripetute non serve più.",
+      "Mai integratori per la glicemia: è materia da medico."
+    ]
+  },
+
+  "rules": {
+    "saturday": [
+      "Settimana completa: sabato niente, weekend libero.",
+      "Una seduta saltata: la recuperi sabato mattina, identica, stessi carichi.",
+      "Due o più saltate: ne recuperi una sola, la più alta in priorità. Le altre si perdono.",
+      "Si recupera la seduta che manca, non quella in calendario il giorno saltato.",
+      "Mai due sedute in un giorno, mai due giorni di gambe di fila, domenica sempre riposo."
+    ],
+    "priorityNote": "Si sacrifica dal fondo. La C è la prima a cadere, ma se salta due settimane di fila ha la priorità sul sabato.",
+    "threeDays": "Due settimane di fila sotto le tre sedute: il programma va riscritto su tre giorni.",
+    "constraints": [
+      "Spalla sinistra: shoulder press del lunedì con tetto a 12,5 + 12,5 finché non è silenziosa per tre sedute di fila. Il venerdì 10 + 10, ed è la prima cosa da togliere se parla.",
+      "Rotazioni esterne ai cavi e face pull non si tolgono mai, nemmeno dalle versioni brevi.",
+      "Stacco rumeno escluso dal 7 ottobre (al suo posto l'hip thrust). Niente dip: in palestra non ci sono le parallele.",
+      "Niente corsa, niente test di Cooper, niente padel. La corsa rientra solo fuori casa, senza palestra.",
+      "Core sempre in isometria e anti-rotazione. Mai flessioni laterali caricate né torsioni con carico: allargano il punto vita.",
+      "Leg curl: posizione sotto 3, posizione sedia 5."
+    ]
+  },
+
+  "disclaimer": "Allenatore, non medico. Dolore al petto, capogiro, batticuore irregolare o affanno sproporzionato: ti fermi e ne parli con un medico."
+}

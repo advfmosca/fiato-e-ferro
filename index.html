@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Fiato e Ferro</title>
+  <meta name="description" content="Fiato e Ferro, Ciclo 2: la scheda di allenamento di oggi.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f9f8">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#050807">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Fiato e Ferro">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-today" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="17" rx="3"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/><path d="m9 15.5 2 2 4-4"/></symbol>
+      <symbol id="i-dumbbell" viewBox="0 0 24 24"><rect x="4.5" y="6.5" width="3.5" height="11" rx="1.2"/><rect x="16" y="6.5" width="3.5" height="11" rx="1.2"/><path d="M8 12h8M2 9.5v5M22 9.5v5"/></symbol>
+      <symbol id="i-bag" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13.5" rx="2.5"/><path d="M8.5 7V5.2A1.7 1.7 0 0 1 10.2 3.5h3.6a1.7 1.7 0 0 1 1.7 1.7V7M3 13h18"/></symbol>
+      <symbol id="i-log" viewBox="0 0 24 24"><rect x="4.5" y="4" width="15" height="17.5" rx="2.5"/><path d="M9 2.5h6v3H9zM8.5 11h7M8.5 15h4.5"/></symbol>
+      <symbol id="i-food" viewBox="0 0 24 24"><path d="M3 2.5v6.5a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V2.5M7 2.5v19M21 15V2.5a5 5 0 0 0-5 5v5.5a2 2 0 0 0 2 2h3Zm0 0v6.5"/></symbol>
+      <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="8"/><path d="M12 9.5v4l2.5 2M9.5 2.5h5"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="4"/><path d="m10 9.2 5 2.8-5 2.8z" fill="currentColor"/></symbol>
+      <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+      <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12.5" height="12.5" rx="2.5"/><path d="M5 15H4.5A2 2 0 0 1 2.5 13V4.5a2 2 0 0 1 2-2H13a2 2 0 0 1 2 2V5"/></symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 2.2 18a2 2 0 0 0 1.7 3h16.2a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a7 7 0 0 0 11 11Z"/></symbol>
+      <symbol id="i-sound" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></symbol>
+      <symbol id="i-mute" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m22 9-6 6M16 9l6 6"/></symbol>
+    </defs>
+  </svg>
+
+  <div class="app" id="app">
+    <header class="top" id="top"></header>
+    <main class="main" id="main" tabindex="-1">
+      <div class="boot" id="boot">Carico la scheda…</div>
+    </main>
+  </div>
+
+  <div class="timer-pill" id="timerPill" hidden>
+    <button type="button" class="timer-pill-btn" data-act="timer-open" aria-label="Apri il timer di recupero">
+      <svg class="ico" aria-hidden="true"><use href="#i-timer"/></svg>
+      <span class="timer-pill-label">Recupero</span>
+      <span class="timer-pill-time" id="timerPillTime">0:00</span>
+    </button>
+    <span class="timer-pill-bar"><span id="timerPillBar"></span></span>
+  </div>
+
+  <div class="sheet-scrim" id="sheetScrim" hidden data-act="timer-close"></div>
+  <section class="sheet" id="timerSheet" role="dialog" aria-modal="true" aria-labelledby="timerTitle" hidden>
+    <div class="sheet-grab" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <h2 id="timerTitle" class="sheet-title">Recupero</h2>
+      <button type="button" class="icon-btn" data-act="timer-close" aria-label="Chiudi"><svg class="ico" aria-hidden="true"><use href="#i-x"/></svg></button>
+    </div>
+    <p class="sheet-sub" id="timerExercise"></p>
+    <div class="timer-face">
+      <svg class="timer-ring" viewBox="0 0 120 120" aria-hidden="true">
+        <circle cx="60" cy="60" r="54" class="ring-track"/>
+        <circle cx="60" cy="60" r="54" class="ring-fill" id="timerRing"/>
+      </svg>
+      <div class="timer-time" id="timerTime" role="timer" aria-live="off">0:00</div>
+    </div>
+    <div class="timer-presets" id="timerPresets"></div>
+    <div class="timer-controls">
+      <button type="button" class="btn btn-soft" data-act="timer-add" data-sec="-15">−15 s</button>
+      <button type="button" class="btn btn-primary" data-act="timer-stop" id="timerStop">Stop</button>
+      <button type="button" class="btn btn-soft" data-act="timer-add" data-sec="15">+15 s</button>
+    </div>
+    <button type="button" class="timer-sound" data-act="timer-sound" id="timerSound" aria-pressed="false">
+      <svg class="ico" aria-hidden="true"><use href="#i-mute"/></svg><span>Suono a fine recupero: spento</span>
+    </button>
+  </section>
+
+  <nav class="tabbar" id="tabbar" aria-label="Sezioni">
+    <button type="button" class="tab" data-tab="oggi" aria-current="page"><svg class="ico" aria-hidden="true"><use href="#i-today"/></svg><span>Oggi</span></button>
+    <button type="button" class="tab" data-tab="schede"><svg class="ico" aria-hidden="true"><use href="#i-dumbbell"/></svg><span>Schede</span></button>
+    <button type="button" class="tab" data-tab="viaggio"><svg class="ico" aria-hidden="true"><use href="#i-bag"/></svg><span>Viaggio</span></button>
+    <button type="button" class="tab" data-tab="registro"><svg class="ico" aria-hidden="true"><use href="#i-log"/></svg><span>Registro</span></button>
+    <button type="button" class="tab" data-tab="cibo"><svg class="ico" aria-hidden="true"><use href="#i-food"/></svg><span>Cibo</span></button>
+  </nav>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
