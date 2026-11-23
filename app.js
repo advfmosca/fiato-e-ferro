@@ -3,7 +3,7 @@
 (() => {
   'use strict';
 
-  const APP_VERSION = '1.3.0';
+  const APP_VERSION = '1.4.0';
   const KEY = 'fef.v1';
   const DAY_MS = 864e5;
   const CIRC = 339.292; // 2 * PI * 54, anello del timer
@@ -476,6 +476,7 @@
         <label class="field"><span class="field-l">Nota della seduta</span>
         <textarea class="input" data-note="1" rows="3" placeholder="Come è andata, cosa hai cambiato, cosa dire a Claude">${esc((rec && rec.note) || '')}</textarea></label>
       </section>`;
+      h += sendCard('session', date, rec && rec.sentAt);
       const b = P.food.breakfast[Math.abs(dnum(date)) % P.food.breakfast.length];
       h += `<section class="card" style="margin-top:12px"><h2 class="card-title">Dopo: colazione</h2><p>${esc(P.food.breakfastGoal.replace(/^Colazione dopo l'allenamento: /, 'Obiettivo '))}</p><p class="muted">Oggi, per esempio: ${esc(low(b))}</p></section>`;
     }
@@ -504,8 +505,10 @@
   function feedbackCard(mon) {
     return `<section class="card">
       <h2 class="card-title">Riscontro della settimana</h2>
-      <p>Copia il riepilogo e incollalo in chat a Claude: carichi e ripetizioni veri, stato della spalla, carichi reali al posto delle proposte.</p>
-      <button type="button" class="btn btn-primary btn-block" data-act="copy-week" data-mon="${mon}" style="margin-top:6px">${ico('copy')}Copia il riepilogo della settimana</button>
+      <p>Manda a Claude la settimana: carichi e ripetizioni veri, sedute ed esercizi saltati, stato della spalla, carichi reali al posto delle proposte. Serve a ricalibrare la scheda.</p>
+      ${emailField()}
+      <button type="button" class="btn btn-primary btn-block" data-act="send-week" data-mon="${mon}" style="margin-top:6px">${ico('mail')}Invia la settimana a Claude</button>
+      <button type="button" class="btn btn-plain btn-block" data-act="copy-week" data-mon="${mon}" style="margin-top:8px">${ico('copy')}Copia il testo</button>
     </section>`;
   }
 
@@ -749,7 +752,9 @@
     if (c.status === 'in' || dnum(sat) === dnum(addDays(P.cycle.start, -2))) h += measuresCard(sat, dnum(sat) <= dnum(S.today));
 
     const text = weekSummary(mon);
-    h += `<button type="button" class="btn btn-primary btn-block" data-act="copy-week" data-mon="${mon}" style="margin-top:4px">${ico('copy')}Copia il riepilogo della settimana</button>
+    h += `<section class="card"><h2 class="card-title">Invia a Claude</h2><p class="muted small">Si apre Mail con la settimana già scritta: tocchi Invia e Claude la legge da Gmail per ricalibrare la scheda.</p>${emailField(true)}
+      <button type="button" class="btn btn-primary btn-block" data-act="send-week" data-mon="${mon}" style="margin-top:6px">${ico('mail')}Invia la settimana a Claude</button>
+      <button type="button" class="btn btn-plain btn-block" data-act="copy-week" data-mon="${mon}" style="margin-top:8px">${ico('copy')}Copia il testo</button></section>
       <details class="card" style="margin-top:12px" id="previewBox"><summary>Vedi il testo che copi</summary><pre class="preview" id="previewText">${esc(text)}</pre></details>
       <p class="footer-note">Il registro resta su questo telefono e non arriva a Claude da solo. Apri l'app sempre dall'icona sulla Home: Safari e l'icona tengono due registri separati.</p>`;
     return h;
@@ -927,6 +932,113 @@
     return L.join('\n');
   }
 
+  /* ---------- invio a Claude via email ---------- */
+
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const userEmail = () => (DB.prefs && typeof DB.prefs.email === 'string' ? DB.prefs.email : '');
+  function emailField(always) {
+    const e = userEmail();
+    if (e && !always) return '';
+    return `<label class="field" style="margin:4px 0 10px"><span class="field-l">${e ? 'Indirizzo a cui arriva' : 'La tua email (la chiede solo la prima volta)'}</span>
+      <input class="input input-text" type="email" inputmode="email" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" data-pref="email" value="${esc(e)}" placeholder="nome@gmail.com"></label>`;
+  }
+  function sendCard(kind, date, sentAt) {
+    const when = sentAt ? new Date(sentAt) : null;
+    const sentTxt = when ? `Inviata ${dnum(iso(when)) === dnum(date) ? 'alle' : `il ${fmtDM(iso(when))} alle`} ${when.getHours()}:${pad(when.getMinutes())}. Se hai cambiato qualcosa, inviala di nuovo.` : '';
+    return `<section class="card send-card">
+      <h2 class="card-title">Invia la seduta a Claude</h2>
+      <p class="muted small">Si apre Mail con esercizi, serie, ripetizioni e pesi già scritti: tocchi Invia. Claude la legge da Gmail e ogni settimana ricalibra carichi ed effort. Funziona anche senza rete: parte quando torna.</p>
+      ${emailField()}
+      <button type="button" class="btn btn-primary btn-block" data-act="send-session" data-date="${date}">${ico('mail')}${sentAt ? 'Invia di nuovo' : 'Invia a Claude'}</button>
+      ${sentTxt ? `<p class="muted small" style="margin:10px 0 0">${esc(sentTxt)}</p>` : ''}
+    </section>`;
+  }
+  function planOf(v) { return v.cardio ? `${v.duration}` : `${v.sets} × ${v.reps}`; }
+  function sessionData(date, sid) {
+    const r = DB.days[date];
+    const c = ctx(date);
+    const variant = (r && r.variant) || 'full';
+    const ex = exercisesFor(sid, variant).map((e) => {
+      const v = resolveEx(e, c);
+      const l = exLog(r, e.id) || {};
+      return { id: e.id, name: v.name, plan: planOf(v), load: v.load, kg: l.kg || null, reps: l.reps || null, sets: l.sets || 0, of: v.sets || null, done: exDone(l), proposal: (v.flags || []).includes('proposal') || undefined };
+    });
+    return {
+      v: 1, kind: 'session', date, week: c.pause ? null : c.week, block: c.block, deload: !!c.deload, pause: !!c.pause,
+      session: sid, variant, status: dayStatus(r) || 'aperta', shoulder: (r && r.shoulder) || null, note: (r && r.note) || '', ex,
+    };
+  }
+  function sessionMail(date, sid) {
+    const d = sessionData(date, sid);
+    const sess = P.sessions[sid];
+    const c = ctx(date);
+    const vName = d.variant === 'short' ? 'versione da 30 min' : d.variant === 'bw' ? P.bodyweight[sess.bodyweight].name.toLowerCase() : 'versione completa';
+    const doneN = d.ex.filter((e) => e.done).length;
+    const L = [];
+    L.push(`Fiato e Ferro · ${P.cycle.name} · seduta`);
+    L.push(`${cap(WD[wday(date)])} ${fmtDM(date)}/${parse(date).getFullYear()} · ${weekLabel(c)}`);
+    L.push(`${sess.name}, ${low(sess.title)} · ${vName}`);
+    L.push(`Stato: ${d.status === 'done' ? 'fatta' : d.status === 'skipped' ? 'saltata' : 'non segnata'} · ${doneN} di ${d.ex.length} esercizi fatti`);
+    if (sess.push) L.push(`Spalla sinistra: ${d.shoulder === 'ok' ? 'silenziosa' : d.shoulder === 'talked' ? 'ha parlato' : 'non indicata'}`);
+    L.push('');
+    const miss = [];
+    d.ex.forEach((e) => {
+      const src = { kg: e.kg, reps: e.reps, sets: e.sets, setsOf: e.of };
+      const base = exercisesFor(sid, d.variant).find((x) => x.id === e.id);
+      const t = logText(resolveEx(base, c), src);
+      if (t) L.push(`- ${e.name} (previsto ${e.plan}, ${e.load}): ${t}${e.done ? '' : ', non completato'}`);
+      else if (e.done) L.push(`- ${e.name} (previsto ${e.plan}, ${e.load}): fatto, senza numeri`);
+      else miss.push(e.name);
+    });
+    if (miss.length) L.push(`Non fatti: ${miss.join(', ')}`);
+    if (d.note) { L.push(''); L.push(`Nota: ${d.note.replace(/\s+/g, ' ').trim()}`); }
+    L.push('');
+    L.push('---DATI---');
+    L.push(JSON.stringify(d));
+    L.push('---FINE---');
+    return { subject: `[Fiato e Ferro] Seduta ${fmtDay(date)} · ${sess.name}`, body: L.join('\n') };
+  }
+  function weekMail(mon) {
+    const sun = addDays(mon, 6);
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(mon, i);
+      const r = DB.days[d];
+      const sid = loggedSession(d);
+      if (!sid) continue;
+      if (r && (recHasData(r) || r.done === true || r.skipped || r.shoulder || r.note)) {
+        const sd = sessionData(d, sid);
+        sd.ex = sd.ex.filter((e) => e.done || e.kg || e.reps || e.sets);
+        days.push(sd);
+      } else if (isMissedDay(d)) days.push({ date: d, session: sid, status: 'saltata' });
+    }
+    const m = DB.measures[addDays(mon, 5)] || null;
+    const data = { v: 1, kind: 'week', from: mon, to: sun, days, measures: m };
+    const body = `${weekSummary(mon)}\n\n---DATI---\n${JSON.stringify(data)}\n---FINE---`;
+    return { subject: `[Fiato e Ferro] Settimana ${fmtRange(mon, sun)}`, body };
+  }
+  function openMail(to, subject, body) {
+    const url = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  function readEmail(btn) {
+    const box = btn.closest('.card');
+    const input = box && box.querySelector('input[data-pref="email"]');
+    const v = (input ? input.value : userEmail()).trim();
+    if (!EMAIL_RE.test(v)) {
+      toast('Scrivi prima la tua email: la chiedo solo la prima volta.');
+      if (input) input.focus();
+      return '';
+    }
+    if (v !== userEmail()) { DB.prefs.email = v; save(); }
+    return v;
+  }
+
   async function copyText(text) {
     try {
       if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; }
@@ -1076,6 +1188,29 @@
         } else if (l.sets >= total) toast('Esercizio completato.');
         break;
       }
+      case 'send-session': {
+        const to = readEmail(t);
+        if (!to) break;
+        const date = t.dataset.date;
+        const sid = S.cur && S.cur.date === date ? S.cur.id : loggedSession(date);
+        if (!sid) { toast('Niente da inviare per questo giorno.'); break; }
+        const rec = touchRec();
+        const mail = sessionMail(date, sid);
+        rec.sentAt = Date.now();
+        save();
+        openMail(to, mail.subject, mail.body);
+        toast('Si apre Mail: tocca Invia.');
+        setTimeout(() => render(), 600);
+        break;
+      }
+      case 'send-week': {
+        const to = readEmail(t);
+        if (!to) break;
+        const mail = weekMail(t.dataset.mon);
+        openMail(to, mail.subject, mail.body);
+        toast('Si apre Mail: tocca Invia.');
+        break;
+      }
       case 'day-status': {
         const rec = touchRec();
         const v = t.dataset.v;
@@ -1186,6 +1321,9 @@
       const m = DB.measures[d] || (DB.measures[d] = {});
       m[el.dataset.m] = v;
       save();
+    } else if (el.matches('input[data-pref="email"]')) {
+      const v = el.value.trim();
+      if (!v || EMAIL_RE.test(v)) { DB.prefs.email = v; save(); }
     } else if (el.matches('textarea[data-note]')) {
       const rec = touchRec();
       rec.note = el.value;

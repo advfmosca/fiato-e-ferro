@@ -20,6 +20,17 @@ Se cambiano `index.html`, `app.js`, `style.css` o le icone, alza `VERSION` in `s
 
 I kg e le ripetizioni registrati restano nel `localStorage` del telefono (chiave `fef.v1`). Non arrivano a Claude da soli: il pulsante «Copia il riepilogo della settimana» nella sezione Registro prepara il testo da incollare in chat.
 
+## Invio a Claude
+
+A fine seduta il tasto «Invia a Claude» apre Mail con la seduta già scritta; nel Registro c'è lo stesso per la settimana. L'indirizzo lo inserisce l'utente nell'app e resta nel telefono, non nel codice.
+
+- Oggetto: `[Fiato e Ferro] Seduta <giorno gg/mm> · Scheda X` oppure `[Fiato e Ferro] Settimana <date>`.
+- Corpo: riepilogo leggibile, poi i dati in JSON tra le righe `---DATI---` e `---FINE---`.
+- Seduta (`kind: "session"`): data, settimana, blocco, scarico/pausa, scheda, versione, stato (`done`/`skipped`), spalla, nota ed elenco esercizi con previsto (`plan`, `load`), fatto (`kg`, `reps`, `sets` su `of`) e `done`.
+- Settimana (`kind: "week"`): le sedute dei giorni con dati, i giorni saltati e le misure del sabato.
+
+Per ricalibrare: cercare in Gmail `subject:"[Fiato e Ferro]"`, leggere i blocchi JSON e aggiornare `program.json`.
+
 ## Prova in locale
 
 ```bash

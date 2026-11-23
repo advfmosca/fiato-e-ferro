@@ -440,6 +440,8 @@ a { color: var(--accent-text); }
 .input:focus { outline: none; border-color: var(--accent); background: var(--card); }
 .ex-last { grid-column: 1 / -1; margin: 0; font-size: 13px; color: var(--ink-3); }
 
+.input-text { font: 500 16px/1.2 var(--sans); }
+.send-card .btn { margin-top: 4px; }
 textarea.input {
   height: auto; min-height: 96px;
   padding: 12px;
