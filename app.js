@@ -3,7 +3,7 @@
 (() => {
   'use strict';
 
-  const APP_VERSION = '1.4.0';
+  const APP_VERSION = '1.4.1';
   const KEY = 'fef.v1';
   const DAY_MS = 864e5;
   const CIRC = 339.292; // 2 * PI * 54, anello del timer
@@ -986,7 +986,8 @@
       const src = { kg: e.kg, reps: e.reps, sets: e.sets, setsOf: e.of };
       const base = exercisesFor(sid, d.variant).find((x) => x.id === e.id);
       const t = logText(resolveEx(base, c), src);
-      if (t) L.push(`- ${e.name} (previsto ${e.plan}, ${e.load}): ${t}${e.done ? '' : ', non completato'}`);
+      const assumed = !e.kg && (e.sets || e.done) && /\d/.test(e.load) ? ', carico previsto' : '';
+      if (t) L.push(`- ${e.name} (previsto ${e.plan}, ${e.load}): ${t}${assumed}${e.done ? '' : ', non completato'}`);
       else if (e.done) L.push(`- ${e.name} (previsto ${e.plan}, ${e.load}): fatto, senza numeri`);
       else miss.push(e.name);
     });
@@ -1185,7 +1186,13 @@
             const presets = chip.dataset.rest.split(',').map(Number);
             timerStart(presets[0], `${chip.dataset.name} · dopo la serie ${l.sets} di ${total}`, presets);
           }
-        } else if (l.sets >= total) toast('Esercizio completato.');
+        } else if (l.sets >= total) {
+          const repsIn = card && card.querySelector('input[data-f="reps"]');
+          if (repsIn && !repsIn.value && !repsIn.disabled) {
+            repsIn.focus({ preventScroll: false });
+            toast("Fatto. Scrivi le ripetizioni dell'ultima serie.");
+          } else toast('Esercizio completato.');
+        }
         break;
       }
       case 'send-session': {
