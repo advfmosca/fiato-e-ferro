@@ -3,7 +3,7 @@
 (() => {
   'use strict';
 
-  const APP_VERSION = '1.4.1';
+  const APP_VERSION = '1.4.2';
   const KEY = 'fef.v1';
   const DAY_MS = 864e5;
   const CIRC = 339.292; // 2 * PI * 54, anello del timer
@@ -303,6 +303,27 @@
     const base = logTextNums(v, l);
     return setsTxt ? `${base} · ${setsTxt}` : base;
   }
+  // Campi vuoti = Francesco ha fatto quanto previsto dalla scheda (scelta sua, 23/11/2026).
+  function effLog(v, l) {
+    if (!l || !(l.kg || l.reps || l.sets || exDone(l))) return null;
+    const f = { kg: l.kg || '', reps: l.reps || '', sets: l.sets || 0, setsOf: l.setsOf || v.sets || 0, kgDefault: false, repsDefault: false };
+    if (!f.sets && exDone(l) && v.sets) f.sets = v.sets;
+    if (!(f.sets || exDone(l))) return f;
+    if (v.cardio) {
+      if (!f.reps && v.duration) { f.reps = splitUnit(v.duration)[0]; f.repsDefault = true; }
+      return f;
+    }
+    if (!f.kg && /\d/.test(v.load || '')) { f.kg = (String(v.load).match(/[\d.,]+/) || [''])[0]; f.kgDefault = true; }
+    if (!f.reps && v.reps) { f.reps = repsParts(v.reps)[0].replace(/\s*s$/, ''); f.repsDefault = true; }
+    return f;
+  }
+  function defNote(f) {
+    if (!f) return '';
+    if (f.kgDefault && f.repsDefault) return ', come previsto';
+    if (f.kgDefault) return ', carico previsto';
+    if (f.repsDefault) return ', ripetizioni previste';
+    return '';
+  }
   function logTextNums(v, l) {
     if (v.cardio) return [l.reps ? `${commas(l.reps)} min` : '', l.kg ? `liv. ${commas(l.kg)}` : ''].filter(Boolean).join(', ');
     if (isBodyweight(v)) return l.reps ? `${commas(l.reps)}${isTimed(v) ? ' s' : ' rip'}` : '';
@@ -350,7 +371,7 @@
     if (o.editable || o.future) {
       const last = lastLog(v.id, o.date);
       const [rm] = repsParts(v.reps || '');
-      const repsPh = (last && last.reps) || rm.replace(/\s*s$/, '');
+      const repsPh = rm.replace(/\s*s$/, '');
       const fields = [];
       if (v.cardio) {
         fields.push(field(v.id, 'reps', 'Minuti fatti', l && l.reps, (last && last.reps) || splitUnit(v.duration)[0], 'numeric', off));
@@ -358,11 +379,11 @@
       } else if (isBodyweight(v)) {
         fields.push(field(v.id, 'reps', isTimed(v) ? 'Secondi fatti' : 'Ripetizioni fatte', l && l.reps, repsPh, 'numeric', off));
       } else {
-        const kgPh = (last && last.kg) || (String(v.load).match(/[\d.,]+/) || [''])[0];
+        const kgPh = (String(v.load).match(/[\d.,]+/) || [''])[0];
         fields.push(field(v.id, 'kg', /\+/.test(v.load) ? 'Kg per manubrio' : 'Kg fatti', l && l.kg, kgPh, 'decimal', off));
         fields.push(field(v.id, 'reps', 'Ripetizioni fatte', l && l.reps, repsPh, 'numeric', off));
       }
-      const lastTxt = off ? '<p class="ex-last">Si compila il giorno della seduta.</p>' : last ? `<p class="ex-last">Ultima volta: ${esc(logText(v, last))} · ${esc(fmtDay(last.date))}</p>` : '';
+      const lastTxt = off ? '<p class="ex-last">Si compila il giorno della seduta.</p>' : `<p class="ex-last">${last ? `Ultima volta: ${esc(logText(v, last))} · ${esc(fmtDay(last.date))}. ` : ''}Lascia vuoto se hai fatto il previsto.</p>`;
       log = `<div class="ex-log${fields.length === 1 ? ' single' : ''}">${fields.join('')}${lastTxt}</div>`;
     }
 
@@ -735,7 +756,7 @@
       const lines = [];
       let miss = [];
       if (sid) {
-        sessionExercises(sid).forEach((e) => { const l = exLog(r, e.id); const t = logText(e, l); if (t) lines.push(`<div class="log-line"><span>${esc(e.name)}</span><span>${esc(t)}</span></div>`); });
+        sessionExercises(sid).forEach((e) => { const l = exLog(r, e.id); const f = effLog(e, l); const t = f ? logText(e, f) : ''; if (t) lines.push(`<div class="log-line"><span>${esc(e.name)}</span><span>${esc(t)}</span></div>`); });
         miss = exercisesFor(sid, (r && r.variant) || 'full').filter((e) => !exDone(exLog(r, e.id))).map((e) => e.name);
       }
       const variant = r && r.variant;
@@ -879,7 +900,8 @@
       list.forEach((e) => {
         const v = resolveEx(e, dc);
         const l = exLog(r, e.id);
-        const t = logText(v, l);
+        const f = effLog(v, l);
+        const t = f ? logText(v, f) + defNote(f) : '';
         const plan = v.cardio ? `${v.duration}, ${v.load}` : `${v.sets} × ${v.reps}, ${v.load}`;
         if (t) L.push(`- ${v.name} (previsto ${plan}): ${t}`);
         else if (exDone(l)) L.push(`- ${v.name} (previsto ${plan}): fatto, senza numeri`);
@@ -961,7 +983,13 @@
     const ex = exercisesFor(sid, variant).map((e) => {
       const v = resolveEx(e, c);
       const l = exLog(r, e.id) || {};
-      return { id: e.id, name: v.name, plan: planOf(v), load: v.load, kg: l.kg || null, reps: l.reps || null, sets: l.sets || 0, of: v.sets || null, done: exDone(l), proposal: (v.flags || []).includes('proposal') || undefined };
+      const f = effLog(v, l);
+      return {
+        id: e.id, name: v.name, plan: planOf(v), load: v.load,
+        kg: (f && f.kg) || null, reps: (f && f.reps) || null,
+        kgDefault: (f && f.kgDefault) || undefined, repsDefault: (f && f.repsDefault) || undefined,
+        sets: f ? f.sets : 0, of: v.sets || null, done: exDone(l), proposal: (v.flags || []).includes('proposal') || undefined,
+      };
     });
     return {
       v: 1, kind: 'session', date, week: c.pause ? null : c.week, block: c.block, deload: !!c.deload, pause: !!c.pause,
@@ -986,8 +1014,8 @@
       const src = { kg: e.kg, reps: e.reps, sets: e.sets, setsOf: e.of };
       const base = exercisesFor(sid, d.variant).find((x) => x.id === e.id);
       const t = logText(resolveEx(base, c), src);
-      const assumed = !e.kg && (e.sets || e.done) && /\d/.test(e.load) ? ', carico previsto' : '';
-      if (t) L.push(`- ${e.name} (previsto ${e.plan}, ${e.load}): ${t}${assumed}${e.done ? '' : ', non completato'}`);
+      const note = defNote({ kgDefault: e.kgDefault, repsDefault: e.repsDefault });
+      if (t) L.push(`- ${e.name} (previsto ${e.plan}, ${e.load}): ${t}${note}${e.done ? '' : ', non completato'}`);
       else if (e.done) L.push(`- ${e.name} (previsto ${e.plan}, ${e.load}): fatto, senza numeri`);
       else miss.push(e.name);
     });
@@ -1186,13 +1214,7 @@
             const presets = chip.dataset.rest.split(',').map(Number);
             timerStart(presets[0], `${chip.dataset.name} · dopo la serie ${l.sets} di ${total}`, presets);
           }
-        } else if (l.sets >= total) {
-          const repsIn = card && card.querySelector('input[data-f="reps"]');
-          if (repsIn && !repsIn.value && !repsIn.disabled) {
-            repsIn.focus({ preventScroll: false });
-            toast("Fatto. Scrivi le ripetizioni dell'ultima serie.");
-          } else toast('Esercizio completato.');
-        }
+        } else if (l.sets >= total) toast('Esercizio completato.');
         break;
       }
       case 'send-session': {

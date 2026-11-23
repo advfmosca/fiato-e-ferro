@@ -27,6 +27,7 @@ A fine seduta il tasto «Invia a Claude» apre Mail con la seduta già scritta; 
 - Oggetto: `[Fiato e Ferro] Seduta <giorno gg/mm> · Scheda X` oppure `[Fiato e Ferro] Settimana <date>`.
 - Corpo: riepilogo leggibile, poi i dati in JSON tra le righe `---DATI---` e `---FINE---`.
 - Seduta (`kind: "session"`): data, settimana, blocco, scarico/pausa, scheda, versione, stato (`done`/`skipped`), spalla, nota ed elenco esercizi con previsto (`plan`, `load`), fatto (`kg`, `reps`, `sets` su `of`) e `done`.
+- Campi lasciati vuoti valgono come previsti: in quel caso `kg`/`reps` riportano il previsto e `kgDefault`/`repsDefault` sono `true`.
 - Settimana (`kind: "week"`): le sedute dei giorni con dati, i giorni saltati e le misure del sabato.
 
 Per ricalibrare: cercare in Gmail `subject:"[Fiato e Ferro]"`, leggere i blocchi JSON e aggiornare `program.json`.
