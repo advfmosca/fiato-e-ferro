@@ -349,6 +349,7 @@ a { color: var(--accent-text); }
 .tag-new { background: var(--accent-soft); color: var(--accent-text); }
 .tag-keep { background: var(--accent); color: var(--accent-ink); }
 .tag-cap, .tag-proposal { background: var(--warn-soft); color: var(--warn); }
+.tag-pump { background: var(--ink); color: var(--bg); }
 
 .ex-nums {
   display: grid;
@@ -379,6 +380,7 @@ a { color: var(--accent-text); }
 }
 
 .ex-calib { background: var(--accent-soft); font-weight: 600; }
+.ex-pump { background: var(--card-2); font-weight: 500; }
 .ex-how { margin-top: 8px; }
 .ex-how summary { min-height: 40px; font-size: 15px; }
 .ex-how p { margin: 0 0 4px; font-size: 15px; line-height: 1.45; color: var(--ink-2); }

@@ -10,6 +10,7 @@ Tutti i dati stanno in `program.json`: esercizi, serie, ripetizioni, carichi, re
 
 - Per cambiare un carico basta modificare il campo `load` dell'esercizio. Un carico ancora da confermare ha `"flags": ["proposal"]`: quando arriva il numero vero si aggiorna `load` e si toglie `proposal`.
 - Aggiorna anche `version` (data della modifica): compare in fondo all'app.
+- Pump: un esercizio con il blocco `"pump": { "fromWeek": 2, "toWeek": 8, "rest": "45 s", "text": "…" }` mostra il tag «Pump», usa quel recupero e la nota sul drop set dalla settimana `fromWeek` fino alla `toWeek` (facoltativa). Nelle settimane di scarico e nella pausa festiva il pump si spegne da solo. Nella mail l'esercizio ha `pump: true`.
 - `program.json` non richiede di alzare la versione del service worker: l'app lo chiede alla rete e usa la copia in cache solo offline.
 
 ## Quando si cambia il codice

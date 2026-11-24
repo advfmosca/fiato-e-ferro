@@ -1,7 +1,7 @@
 /* Service worker di Fiato e Ferro.
    A ogni modifica di index.html, app.js, style.css o delle icone alza VERSION.
    program.json non lo richiede: viene chiesto prima alla rete e, senza connessione, preso dalla cache. */
-const VERSION = 'fef-2026-11-23-3';
+const VERSION = 'fef-2026-11-24-1';
 const ASSETS = [
   './',
   'index.html',

@@ -3,7 +3,7 @@
 (() => {
   'use strict';
 
-  const APP_VERSION = '1.4.2';
+  const APP_VERSION = '1.5.0';
   const KEY = 'fef.v1';
   const DAY_MS = 864e5;
   const CIRC = 339.292; // 2 * PI * 54, anello del timer
@@ -151,6 +151,12 @@
       const okW = o.fromWeek == null || (c.week != null && c.week >= o.fromWeek);
       const okB = o.fromBlock == null || (c.block != null && c.block >= o.fromBlock);
       if (okW && okB) Object.assign(v, o);
+    }
+    // Pump (dal 24/11/2026): recupero corto e drop set sull'ultima serie, mai in scarico o in pausa festiva.
+    const pp = ex.pump;
+    if (pp && c.week != null && !c.deload && !c.pause && c.week >= (pp.fromWeek || 1) && (pp.toWeek == null || c.week <= pp.toWeek)) {
+      v.pumpOn = true; v.pumpText = pp.text || '';
+      if (pp.rest) v.rest = pp.rest;
     }
     v.setsOrig = v.sets;
     if (v.sets && c.sets) v.sets = adjSets(v.sets, c.sets);
@@ -343,6 +349,7 @@
     if (flags.includes('cap')) tags.push('<span class="tag tag-cap">Tetto</span>');
     if (flags.includes('proposal')) tags.push('<span class="tag tag-proposal">Carico da confermare</span>');
     if (flags.includes('new') && (c.block || 1) === 1) tags.push('<span class="tag tag-new">Nuovo</span>');
+    if (v.pumpOn) tags.push('<span class="tag tag-pump">Pump</span>');
 
     let nums;
     if (v.cardio) {
@@ -403,6 +410,7 @@
       ${v.note ? `<p class="ex-note">${esc(v.note)}</p>` : ''}
       ${callout ? `<p class="ex-callout">${esc(callout)}</p>` : ''}
       ${calib ? `<p class="ex-callout ex-calib">${esc(P.rules.calibration)}</p>` : ''}
+      ${v.pumpOn && v.pumpText ? `<p class="ex-callout ex-pump">${esc(v.pumpText)}</p>` : ''}
       ${v.how ? `<details class="ex-how"><summary>Come si esegue</summary><p>${esc(v.how)}</p></details>` : ''}
       ${setsRow}
       <div class="ex-actions">${actions.join('')}</div>
@@ -680,7 +688,7 @@
       <p class="field-l" style="margin-top:16px">Scala di priorità</p><ol class="prio">${pr}</ol>
       <p class="muted small" style="margin-top:10px">${esc(P.rules.priorityNote)}</p>
       <p class="muted small">${esc(P.rules.threeDays)}</p></section>
-      <h2 class="h2">Come si sale di carico</h2><section class="card"><p>${esc(P.rules.progression)}</p><p class="muted small">${esc(P.rules.warmup)}</p></section>`;
+      <h2 class="h2">Come si sale di carico</h2><section class="card"><p>${esc(P.rules.progression)}</p><p class="muted small">${esc(P.rules.warmup)}</p>${P.rules.pump ? `<p class="muted small">${esc(P.rules.pump)}</p>` : ''}</section>`;
   }
   function constraintsCard() {
     return `<h2 class="h2">Vincoli fissi</h2><section class="card"><ul class="bullets">${P.rules.constraints.map((r) => `<li>${esc(r)}</li>`).join('')}</ul></section>`;
@@ -989,6 +997,7 @@
         kg: (f && f.kg) || null, reps: (f && f.reps) || null,
         kgDefault: (f && f.kgDefault) || undefined, repsDefault: (f && f.repsDefault) || undefined,
         sets: f ? f.sets : 0, of: v.sets || null, done: exDone(l), proposal: (v.flags || []).includes('proposal') || undefined,
+        pump: v.pumpOn || undefined,
       };
     });
     return {
